@@ -11,6 +11,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Perform initial setup and preview Pulumi-managed changes
+        env:
+          BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
         run: |
           set -e
 
@@ -41,7 +43,7 @@ jobs:
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npx \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.0' \
+            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.1' \
             'env:BOOTSTRAP_PIPELINE_CONFIG'
 
   run_bootstrap_pipeline_pulumi_up:
@@ -54,6 +56,8 @@ jobs:
         with:
           fetch-depth: 0
       - name: Perform Pulumi-managed changes
+        env:
+          BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
         run: |
           set -e
 
@@ -78,5 +82,5 @@ jobs:
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npx \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.0' \
+            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.1' \
             'env:BOOTSTRAP_PIPELINE_CONFIG' true
