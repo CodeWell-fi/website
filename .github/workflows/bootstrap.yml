@@ -1,6 +1,15 @@
 name: Bootstrap Pipeline
 on: workflow_dispatch
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+
 jobs:
   # Notice that this stage already creates bootstrap SP + CICD RG + SA + KV, with SA containing container for Pulumi state, and KV containing key for Pulumi + secret with SP certificate authentication as contents.
   run_bootstrap_pipeline_pulumi_preview:
@@ -11,10 +20,6 @@ jobs:
         with:
           fetch-depth: 1
       - name: Perform initial setup and preview Pulumi-managed changes
-        env:
-          BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
-          ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
-          ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
         run: |
           set -e
 
@@ -58,10 +63,6 @@ jobs:
         with:
           fetch-depth: 1
       - name: Perform Pulumi-managed changes
-        env:
-          BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
-          ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
-          ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
         run: |
           set -e
 

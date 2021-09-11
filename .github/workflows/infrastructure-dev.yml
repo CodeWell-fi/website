@@ -16,8 +16,14 @@ on:
 defaults:
   run:
     shell: bash
+    working-directory: infrastructure
+
 env:
+  INFRA_ENV: dev
+  AZURE_PIPELINE_VERSION: '1.3.1'
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
   WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
     {
       "resourceGroupName": "codewell-dev-managed-site",
@@ -26,6 +32,7 @@ env:
       "domainName": "dev.codewell.fi",
       "httpsEnabled": true
     }
+
 jobs:
   run_infrastructure_pipeline_pulumi_preview:
     name: Preview infrastructure changes
@@ -45,8 +52,6 @@ jobs:
           set -e
 
           echo 'Reacting to Github event ${{ github.event_name }}.'
-
-          cd infrastructure
           npm ci
           npm run build
 
@@ -68,17 +73,18 @@ jobs:
 
           docker run \
             --rm \
+            --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
-            --volume "$(pwd)/:$(pwd)/:rw" \
+            --volume "$(pwd)/:$(pwd)/:ro" \
             --entrypoint npx \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline@1.3.0'
+            '@data-heaving/pulumi-azure-pipeline@'"${AZURE_PIPELINE_VERSION}"
 
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
-            GIT_TAG_NAME="infra-dev-v${PACKAGE_VERSION}"
+            GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
             if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then
               # Tag does not exist, we can proceed to deploy phase
               echo "Detected that tag ${GIT_TAG_NAME} is not yet created, will proceed to deploy stage"
@@ -105,7 +111,6 @@ jobs:
         run: |
           set -e
 
-          cd infrastructure
           npm ci
           npm run build
 
@@ -127,21 +132,23 @@ jobs:
 
           docker run \
             --rm \
+            --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
+            --volume "$(pwd)/:$(pwd)/:ro" \
             --entrypoint npx \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline@1.3.0' up
+            '@data-heaving/pulumi-azure-pipeline@'"${AZURE_PIPELINE_VERSION}" up
 
           # TODO we must generate release notes for the package
           # TODO set up organization-wide CICD-GitHub account
           PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
-          GIT_TAG_NAME="infra-dev-v${PACKAGE_VERSION}"
+          GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
           git config --global user.email "cd-automation@codewell-site.project"
           git config --global user.name "CD Automation"
           git tag \
             -a \
-            -m "Dev infrastructure release ${PACKAGE_VERSION}" \
+            -m "Infrastructure ${INFRA_ENV} release ${PACKAGE_VERSION}" \
             "${GIT_TAG_NAME}"
           git push origin "${GIT_TAG_NAME}"
