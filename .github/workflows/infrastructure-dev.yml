@@ -13,24 +13,19 @@ on:
     # Trigger only when there are changes to any code (as opposed to READMEs etc)
     - 'infrastructure/**'
 
-# Notice: combination of matrix + job-level if utilizing the matrix currently does not work: https://github.community/t/matrix-cannot-be-used-in-jobs-level-if/17177/4
-# defaults:
-#   strategy:
-#     matrix:
-#       env: [ DEV ]
 defaults:
   run:
     shell: bash
-    env:
-      AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
-      WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
-        {
-          "resourceGroupName": "codewell-dev-managed-site",
-          "organization": "codewell",
-          "environment": "dev",
-          "domainName": "dev.codewell.fi",
-          "httpsEnabled": true
-        }
+env:
+  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+  WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
+    {
+      "resourceGroupName": "codewell-dev-managed-site",
+      "organization": "codewell",
+      "environment": "dev",
+      "domainName": "dev.codewell.fi",
+      "httpsEnabled": true
+    }
 jobs:
   run_infrastructure_pipeline_pulumi_preview:
     name: Preview infrastructure changes
