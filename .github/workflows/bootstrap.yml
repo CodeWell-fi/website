@@ -4,9 +4,14 @@ on: workflow_dispatch
 jobs:
   # Notice that this stage already creates bootstrap SP + CICD RG + SA + KV, with SA containing container for Pulumi state, and KV containing key for Pulumi + secret with SP certificate authentication as contents.
   run_bootstrap_pipeline_pulumi_preview:
+    name: Perform initial setup and preview Pulumi-managed changes
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Perform initial setup and preview Pulumi-managed changes
+        run: |
           set -e
 
           DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
@@ -34,11 +39,16 @@ jobs:
             'env:BOOTSTRAP_PIPELINE_CONFIG'
 
   run_bootstrap_pipeline_pulumi_up:
+    name: Perform Pulumi-managed changes
     needs: [ run_bootstrap_pipeline_pulumi_preview ]
     runs-on: ubuntu-latest
     environment: cloud-deploy-bootstrap
     steps:
-      - run: |
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Perform Pulumi-managed changes
+        run: |
           set -e
 
           DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
