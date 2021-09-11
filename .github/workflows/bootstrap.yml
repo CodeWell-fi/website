@@ -9,10 +9,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Perform initial setup and preview Pulumi-managed changes
         env:
           BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
+          ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+          ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
         run: |
           set -e
 
@@ -43,7 +45,7 @@ jobs:
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npx \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.1' \
+            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.2.0' \
             'env:BOOTSTRAP_PIPELINE_CONFIG'
 
   run_bootstrap_pipeline_pulumi_up:
@@ -54,10 +56,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Perform Pulumi-managed changes
         env:
           BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
+          ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+          ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
         run: |
           set -e
 
@@ -82,5 +86,5 @@ jobs:
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npx \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.1' \
+            '@data-heaving/pulumi-azure-pipeline-bootstrap@1.2.0' \
             'env:BOOTSTRAP_PIPELINE_CONFIG' true
