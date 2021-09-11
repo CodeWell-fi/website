@@ -2,6 +2,7 @@ import { env } from "process";
 import * as input from "./input";
 import * as validation from "@data-heaving/common-validation";
 import pulumiProgram from "./resources";
+import * as pulumi from "@pulumi/pulumi/automation";
 
 const doThrow = <T>(msg: string): T => {
   throw new Error(msg);
@@ -30,11 +31,17 @@ const pulumiPipeline = {
     program: async () => pulumiProgram(config),
   },
   // It looks like ARM_STORAGE_USE_AZUREAD is used only by legacy Pulumi azure provider, not the new azure-native...
-  // additionalParameters: {
-  //   processAdditionalEnvVars: (envVars: Record<string, string>) => Object.assign(envVars, {
-  //     ARM_STORAGE_USE_AZUREAD: "true"
-  //   }),
-  // },
+  additionalParameters: {
+    // processAdditionalEnvVars: (envVars: Record<string, string>) => Object.assign(envVars, {
+    //   ARM_STORAGE_USE_AZUREAD: "true"
+    // }),
+    processLocalWorkspaceOptions: (
+      opts: pulumi.LocalWorkspaceOptions,
+    ): pulumi.LocalWorkspaceOptions => {
+      opts.pulumiHome = "/home/node";
+      return opts;
+    },
+  },
 };
 
 export default pulumiPipeline;
