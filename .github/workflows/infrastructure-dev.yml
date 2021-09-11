@@ -136,6 +136,7 @@ jobs:
             --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
+            --env NODE_PATH="$(pwd)/node_modules" \
             --volume "$(pwd)/:$(pwd)/:ro" \
             --entrypoint npx \
             --workdir "$(pwd)" \
