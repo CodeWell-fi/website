@@ -38,7 +38,7 @@ const pulumiPipeline = {
     processLocalWorkspaceOptions: (
       opts: pulumi.LocalWorkspaceOptions,
     ): pulumi.LocalWorkspaceOptions => {
-      opts.pulumiHome = "/home/node";
+      opts.pulumiHome = "/tmp/dummy";
       return opts;
     },
   },
