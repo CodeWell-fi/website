@@ -1,0 +1,146 @@
+name: Infrastructure Pipeline - DEV
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+# Notice: combination of matrix + job-level if utilizing the matrix currently does not work: https://github.community/t/matrix-cannot-be-used-in-jobs-level-if/17177/4
+# defaults:
+#   strategy:
+#     matrix:
+#       env: [ DEV ]
+defaults:
+  run:
+    shell: bash
+    env:
+      AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+      WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
+        {
+          "resourceGroupName": "codewell-dev-managed-site",
+          "organization": "codewell",
+          "environment": "dev",
+          "domainName": "dev.codewell.fi",
+          "httpsEnabled": true
+        }
+jobs:
+  run_infrastructure_pipeline_pulumi_preview:
+    name: Preview infrastructure changes
+    runs-on: ubuntu-latest
+    outputs:
+      run_deploy: ${{ steps.preview.outputs.run_deploy }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Get full history in order to get existing tag info etc
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: preview
+        name: Preview infrastructure changes
+        run: |
+          set -e
+
+          echo 'Reacting to Github event ${{ github.event_name }}.'
+
+          cd infrastructure
+          npm ci
+          npm run build
+
+          DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          echo 'FROM pulumi/pulumi-nodejs:3.11.0-debian as pulumi
+
+          FROM node:16-buster-slim
+
+          RUN apt-get update \
+            && apt-get install -y --no-install-recommends ca-certificates \
+            && npm config set update-notifier false
+
+          COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
+          COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
+          COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
+          ENV PATH "/pulumi/bin:${PATH}"
+          ' | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          docker run \
+            --rm \
+            --env AZURE_PIPELINE_CONFIG \
+            --env WEBSITE_INFRA_CONFIG \
+            --volume "$(pwd)/:$(pwd)/:rw" \
+            --entrypoint npx \
+            --workdir "$(pwd)" \
+            "${DOCKER_IMAGE_ID}" \
+            '@data-heaving/pulumi-azure-pipeline@1.3.0'
+
+          if [[ '${{ github.event_name }}' == 'push' ]]; then
+            PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
+            GIT_TAG_NAME="infra-dev-v${PACKAGE_VERSION}"
+            if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then
+              # Tag does not exist, we can proceed to deploy phase
+              echo "Detected that tag ${GIT_TAG_NAME} is not yet created, will proceed to deploy stage"
+              echo '::set-output name=run_deploy::true'
+            fi
+          fi
+
+  run_infrastructure_pipeline_pulumi_up:
+    name: Perform infrastructure changes
+    needs: [ run_infrastructure_pipeline_pulumi_preview ]
+    if: ${{ needs.run_infrastructure_pipeline_pulumi_preview.outputs.run_deploy == 'true' }}
+    runs-on: ubuntu-latest
+    environment: cloud-deploy-env-dev
+    timeout-minutes: 180 # SSL-enabled DNS name join to CDN might take a while
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: deploy
+        name: Perform infrastructure changes
+        run: |
+          set -e
+
+          cd infrastructure
+          npm ci
+          npm run build
+
+          DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          echo 'FROM pulumi/pulumi-nodejs:3.11.0-debian as pulumi
+
+          FROM node:16-buster-slim
+
+          RUN apt-get update \
+            && apt-get install -y --no-install-recommends ca-certificates \
+            && npm config set update-notifier false
+
+          COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
+          COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
+          COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
+          ENV PATH "/pulumi/bin:${PATH}"
+          ' | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          docker run \
+            --rm \
+            --env AZURE_PIPELINE_CONFIG \
+            --env WEBSITE_INFRA_CONFIG \
+            --entrypoint npx \
+            --workdir "$(pwd)" \
+            "${DOCKER_IMAGE_ID}" \
+            '@data-heaving/pulumi-azure-pipeline@1.3.0' up
+
+          # TODO we must generate release notes for the package
+          # TODO set up organization-wide CICD-GitHub account
+          PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
+          GIT_TAG_NAME="infra-dev-v${PACKAGE_VERSION}"
+          git config --global user.email "cd-automation@codewell-site.project"
+          git config --global user.name "CD Automation"
+          git tag \
+            -a \
+            -m "Dev infrastructure release ${PACKAGE_VERSION}" \
+            "${GIT_TAG_NAME}"
+          git push origin "${GIT_TAG_NAME}"

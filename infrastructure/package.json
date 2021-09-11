@@ -1,0 +1,51 @@
+{
+  "name": "code-well-site-infrastructure",
+  "version": "1.0.0",
+  "author": {
+    "name": "Stanislav Muhametsin",
+    "email": "346799+stazz@users.noreply.github.com",
+    "url": "https://github.com/stazz"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodeWell/site.git"
+  },
+  "scripts": {
+    "build": "npm run tsc && npm run lint",
+    "tsc": "tsc --project tsconfig.json",
+    "prepublishOnly": "rm -rf dist .nyc_output coverage && npm run build && npm run test && npm run remove-test-files && npm run format-output-files",
+    "lint": "eslint ./src --ext .ts,.tsx",
+    "test": "nyc ava",
+    "remove-test-files": "rm -rf dist/*/tests",
+    "format-output-files": "echo 'const config = require(\"./.eslintrc\"); config.parserOptions.createDefaultProgram = true; config.settings = { [\"import/resolver\"]: { node: { paths: [\"dist\"], extensions: [\".d.ts\"] } } }; console.log(JSON.stringify(config));' | node > .eslintrc-publish.json && eslint --no-eslintrc --config '.eslintrc-publish.json' --fix --ext '.d.ts' dist; FOF_RC=$?; rm -f '.eslintrc-publish.json'; exit $FOF_RC"
+  },
+  "dependencies": {
+    "@azure/identity": "1.5.1",
+    "@azure/ms-rest-js": "2.6.0",
+    "@data-heaving/common-validation": "1.0.0",
+    "@pulumi/azure-native": "1.23.0",
+    "@pulumi/pulumi": "3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "16.7.4",
+    "@typescript-eslint/eslint-plugin": "4.30.0",
+    "@typescript-eslint/parser": "4.30.0",
+    "ava": "4.0.0-alpha.2",
+    "eslint": "7.32.0",
+    "eslint-config-prettier": "8.3.0",
+    "eslint-plugin-prettier": "4.0.0",
+    "nyc": "15.1.0",
+    "prettier": "2.3.2",
+    "typescript": "4.4.2"
+  },
+  "ava": {
+    "files": [
+      "dist/cjs/**/tests/*.spec.js"
+    ],
+    "require": [
+      "./dist/cjs/tests-setup"
+    ],
+    "timeout": "10m"
+  }
+}
