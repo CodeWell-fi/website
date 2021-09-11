@@ -1,0 +1,76 @@
+name: Bootstrap Pipeline
+on: workflow_dispatch
+
+jobs:
+  # Notice that this stage already creates bootstrap SP + CICD RG + SA + KV, with SA containing container for Pulumi state, and KV containing key for Pulumi + secret with SP certificate authentication as contents.
+  run_bootstrap_pipeline_pulumi_preview:
+    name: Perform initial setup and preview Pulumi-managed changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Perform initial setup and preview Pulumi-managed changes
+        run: |
+          set -e
+
+          DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          echo 'FROM pulumi/pulumi-nodejs:3.11.0-debian as pulumi
+
+          FROM node:16-buster-slim
+
+          RUN apt-get update \
+            && apt-get install -y --no-install-recommends ca-certificates \
+            && npm config set update-notifier false
+
+          COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
+          COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
+          COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
+          ENV PATH "/pulumi/bin:${PATH}"
+          ' | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          docker run \
+            --rm \
+            --env BOOTSTRAP_PIPELINE_CONFIG \
+            --entrypoint npx \
+            "${DOCKER_IMAGE_ID}" \
+            run '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.0' \
+            'env:BOOTSTRAP_PIPELINE_CONFIG'
+
+  run_bootstrap_pipeline_pulumi_up:
+    name: Perform Pulumi-managed changes
+    needs: [ run_bootstrap_pipeline_pulumi_preview ]
+    runs-on: ubuntu-latest
+    environment: cloud-deploy-bootstrap
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Perform Pulumi-managed changes
+        run: |
+          set -e
+
+          DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          echo 'FROM pulumi/pulumi-nodejs:3.11.0-debian as pulumi
+
+          FROM node:16-buster-slim
+
+          RUN apt-get update \
+            && apt-get install -y --no-install-recommends ca-certificates \
+            && npm config set update-notifier false
+
+          COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
+          COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
+          COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
+          ENV PATH "/pulumi/bin:${PATH}"
+          ' | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          docker run \
+            --rm \
+            --env BOOTSTRAP_PIPELINE_CONFIG \
+            --entrypoint npx \
+            "${DOCKER_IMAGE_ID}" \
+            run '@data-heaving/pulumi-azure-pipeline-bootstrap@1.1.0' \
+            'env:BOOTSTRAP_PIPELINE_CONFIG' true
