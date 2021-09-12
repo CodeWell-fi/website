@@ -58,6 +58,14 @@ jobs:
           echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
           cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
 
+          # If we don't set NODE_PATH, we will get errors like
+          # Error: Cannot find module '@pulumi/pulumi/cmd/dynamic-provider'
+          # +  pulumi:pulumi:Stack website-infrastructure create Require stack:
+          # +  pulumi:pulumi:Stack website-infrastructure create - /tmp/automation-8Zl7PN/[eval]
+          # This is because Pulumi home path is set to /tmp/<random>
+          # And *that* is done because otherwise Pulumi fails (on Node 16 in Docker in GitHub at least) with the error:
+          # fatal: error An assertion has failed: could not get workspace path. source error: getting current user: luser: unable to get current user
+
           PULUMI_OUT_DIR="$(mktemp -d)"
           docker run \
             --rm \
@@ -72,6 +80,11 @@ jobs:
             "${DOCKER_IMAGE_ID}" \
             run pulumi-azure-pipeline
 
+          echo "DEBUG"
+          cat "${PULUMI_OUT_DIR}/pulumi-out.json" | jq -Mrc '(.summary | keys) == ["same"]'
+          if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then
+            echo "NO TAG"
+          fi
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
             GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
@@ -122,6 +135,7 @@ jobs:
             --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
+            --env NODE_PATH="$(pwd)/node_modules" \
             --volume "$(pwd)/:$(pwd)/:ro" \
             --entrypoint npm \
             --workdir "$(pwd)" \
