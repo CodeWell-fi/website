@@ -9,4 +9,4 @@ RUN apt-get update \
 COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
 COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
 COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
-ENV PATH "/pulumi/bin:${PATH}
+ENV PATH "/pulumi/bin:${PATH}""
