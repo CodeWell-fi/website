@@ -79,6 +79,8 @@ jobs:
             "${DOCKER_IMAGE_ID}" \
             run pulumi-azure-pipeline
 
+          cat "${PULUMI_OUT_DIR}/pulumi-out.json"
+
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
             GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
@@ -126,7 +128,6 @@ jobs:
 
           docker run \
             --rm \
-            --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
             --env NODE_PATH="$(pwd)/node_modules" \
