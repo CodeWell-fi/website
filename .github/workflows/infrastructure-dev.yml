@@ -20,7 +20,6 @@ defaults:
 
 env:
   INFRA_ENV: dev
-  AZURE_PIPELINE_VERSION: '1.3.1'
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
   ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
   ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
@@ -59,12 +58,14 @@ jobs:
           echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
           cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
 
+          PULUMI_OUT_DIR="$(mktemp -d)"
           docker run \
             --rm \
             --env HOME='/home/node' \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
             --volume "$(pwd)/:$(pwd)/:ro" \
+            --volume "${PULUMI_OUT_DIR}/:/pulumi-out/:rw" \
             --entrypoint npm \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
@@ -74,10 +75,19 @@ jobs:
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
             GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
             if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then
-              # Tag does not exist, we can proceed to deploy phase
-              echo "Detected that tag ${GIT_TAG_NAME} is not yet created, will proceed to deploy stage"
-              echo '::set-output name=run_deploy::true'
+              # Tag does not exist, we can proceed to deploy phase if there are changes
+              echo "Detected that tag ${GIT_TAG_NAME} is not yet created"
+              if [[ "$(cat "${PULUMI_OUT_DIR}/pulumi-out.json" | jq -Mrc '(.summary | keys) == ["same"]')" == 'false' ]]; then
+                echo "Detected Pulumi changes, will proceed to deploy stage"
+                echo '::set-output name=run_deploy::true'
+              else
+                echo "No Pulumi changes detected, so not proceeding to deploy stage"
+              fi
+            else
+              echo "Infrastructure environment ${INFRA_ENV} is already at version ${PACKAGE_VERSION}, so not proceeding to deploy stage."
             fi
+          else
+            echo 'Not reacting to push event, so not proceeding to deploy stage'
           fi
 
   run_infrastructure_pipeline_pulumi_up:
