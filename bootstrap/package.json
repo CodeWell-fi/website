@@ -1,0 +1,21 @@
+{
+  "name": "code-well-site-bootstrap",
+  "version": "1.0.0",
+  "author": {
+    "name": "Stanislav Muhametsin",
+    "email": "346799+stazz@users.noreply.github.com",
+    "url": "https://github.com/stazz"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodeWell/site.git"
+  },
+  "scripts": {
+    "pulumi-azure-pipeline-bootstrap": "pulumi-azure-pipeline-bootstrap"
+  },
+  "peerDependencies": {
+    "@data-heaving/pulumi-azure-pipeline-bootstrap": "1.2.0",
+    "@pulumi/pulumi": "3.12.0"
+  }
+}

@@ -1,0 +1,148 @@
+name: Infrastructure Pipeline - DEV
+on:
+  push:
+    branches:
+    - main
+    paths:
+    # Trigger only when there are changes to any code (as opposed to READMEs etc)
+    - 'infrastructure/**'
+  pull_request:
+    branches:
+    - main
+    paths:
+    # Trigger only when there are changes to any code (as opposed to READMEs etc)
+    - 'infrastructure/**'
+
+defaults:
+  run:
+    shell: bash
+    working-directory: infrastructure
+
+env:
+  INFRA_ENV: dev
+  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+  WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
+    {
+      "resourceGroupName": "codewell-dev-managed-site",
+      "organization": "codewell",
+      "environment": "dev",
+      "domainName": "dev.codewell.fi",
+      "httpsEnabled": true
+    }
+
+jobs:
+  run_infrastructure_pipeline_pulumi_preview:
+    name: Preview infrastructure changes
+    runs-on: ubuntu-latest
+    outputs:
+      run_deploy: ${{ steps.preview.outputs.run_deploy }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Get full history in order to get existing tag info etc
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: preview
+        name: Preview infrastructure changes
+        run: |
+          set -e
+
+          echo 'Reacting to Github event ${{ github.event_name }}.'
+          npm ci
+          npm run build
+
+          DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          # If we don't set NODE_PATH, we will get errors like
+          # Error: Cannot find module '@pulumi/pulumi/cmd/dynamic-provider'
+          # +  pulumi:pulumi:Stack website-infrastructure create Require stack:
+          # +  pulumi:pulumi:Stack website-infrastructure create - /tmp/automation-8Zl7PN/[eval]
+          # This is because Pulumi home path is set to /tmp/<random>
+          # And *that* is done because otherwise Pulumi fails (on Node 16 in Docker in GitHub at least) with the error:
+          # fatal: error An assertion has failed: could not get workspace path. source error: getting current user: luser: unable to get current user
+
+          PULUMI_OUT_DIR="$(mktemp -d)"
+          docker run \
+            --rm \
+            --env AZURE_PIPELINE_CONFIG \
+            --env WEBSITE_INFRA_CONFIG \
+            --env NODE_PATH="$(pwd)/node_modules" \
+            --volume "$(pwd)/:$(pwd)/:ro" \
+            --volume "${PULUMI_OUT_DIR}/:/pulumi-out/:rw" \
+            --entrypoint npm \
+            --workdir "$(pwd)" \
+            "${DOCKER_IMAGE_ID}" \
+            run pulumi-azure-pipeline
+
+          if [[ '${{ github.event_name }}' == 'push' ]]; then
+            PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
+            GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
+            if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then
+              # Tag does not exist, we can proceed to deploy phase if there are changes
+              echo "Detected that tag ${GIT_TAG_NAME} is not yet created"
+              if [[ "$(cat "${PULUMI_OUT_DIR}/pulumi-out.json" | jq -Mrc '(.summary | keys) == ["same"]')" == 'false' ]]; then
+                echo "Detected Pulumi changes, will proceed to deploy stage"
+                echo '::set-output name=run_deploy::true'
+              else
+                echo "No Pulumi changes detected, so not proceeding to deploy stage"
+              fi
+            else
+              echo "Infrastructure environment ${INFRA_ENV} is already at version ${PACKAGE_VERSION}, so not proceeding to deploy stage."
+            fi
+          else
+            echo 'Not reacting to push event, so not proceeding to deploy stage'
+          fi
+
+  run_infrastructure_pipeline_pulumi_up:
+    name: Perform infrastructure changes
+    needs: [ run_infrastructure_pipeline_pulumi_preview ]
+    if: ${{ needs.run_infrastructure_pipeline_pulumi_preview.outputs.run_deploy == 'true' }}
+    runs-on: ubuntu-latest
+    environment: cloud-deploy-env-dev
+    timeout-minutes: 180 # SSL-enabled DNS name join to CDN might take a while
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: deploy
+        name: Perform infrastructure changes
+        run: |
+          set -e
+
+          npm ci
+          npm run build
+
+          DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
+          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
+
+          docker run \
+            --rm \
+            --env AZURE_PIPELINE_CONFIG \
+            --env WEBSITE_INFRA_CONFIG \
+            --env NODE_PATH="$(pwd)/node_modules" \
+            --volume "$(pwd)/:$(pwd)/:ro" \
+            --entrypoint npm \
+            --workdir "$(pwd)" \
+            "${DOCKER_IMAGE_ID}" \
+            run pulumi-azure-pipeline -- up
+
+          # TODO we must generate release notes for the package
+          # TODO set up organization-wide CICD-GitHub account
+          PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
+          GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
+          git config --global user.email "cd-automation@codewell-site.project"
+          git config --global user.name "CD Automation"
+          git tag \
+            -a \
+            -m "Infrastructure ${INFRA_ENV} release ${PACKAGE_VERSION}" \
+            "${GIT_TAG_NAME}"
+          git push origin "${GIT_TAG_NAME}"
