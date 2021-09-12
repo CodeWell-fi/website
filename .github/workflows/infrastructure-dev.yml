@@ -66,10 +66,10 @@ jobs:
             --env WEBSITE_INFRA_CONFIG \
             --env NODE_PATH="$(pwd)/node_modules" \
             --volume "$(pwd)/:$(pwd)/:ro" \
-            --entrypoint npx \
+            --entrypoint npm \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline@'"${AZURE_PIPELINE_VERSION}"
+            run pulumi-azure-pipeline
 
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
@@ -114,10 +114,10 @@ jobs:
             --env WEBSITE_INFRA_CONFIG \
             --env NODE_PATH="$(pwd)/node_modules" \
             --volume "$(pwd)/:$(pwd)/:ro" \
-            --entrypoint npx \
+            --entrypoint npm \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
-            '@data-heaving/pulumi-azure-pipeline@'"${AZURE_PIPELINE_VERSION}" up
+            run pulumi-azure-pipeline -- up
 
           # TODO we must generate release notes for the package
           # TODO set up organization-wide CICD-GitHub account
