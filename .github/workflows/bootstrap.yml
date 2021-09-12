@@ -29,17 +29,13 @@ jobs:
             echo 'This action can only be run on main branch!' 1>&2
             exit 1
           fi
-
-          DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
-          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
-          cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
-
+          
           npm ci
           docker run \
             --rm \
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npm \
-            "${DOCKER_IMAGE_ID}" \
+            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
             run pulumi-azure-pipeline-bootstrap -- \
             'env:BOOTSTRAP_PIPELINE_CONFIG'
 
@@ -56,15 +52,11 @@ jobs:
         run: |
           set -e
 
-          DOCKER_IMAGE_ID="bootstrap_run:${GITHUB_RUN_NUMBER}"
-          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
-          cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
-
           npm ci
           docker run \
             --rm \
             --env BOOTSTRAP_PIPELINE_CONFIG \
             --entrypoint npm \
-            "${DOCKER_IMAGE_ID}" \
+            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
             run pulumi-azure-pipeline-bootstrap -- \
             'env:BOOTSTRAP_PIPELINE_CONFIG' true
