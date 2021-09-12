@@ -27,7 +27,7 @@ const pulumiPipeline = {
     // The https://github.com/DataHeaving/pulumi/blob/main/azure-pipeline-bootstrap cli tool used by bootstrap pipeline guarantees us env-specific storage account container, so project and stack name can be constants
     projectName: "website",
     stackName: "infrastructure",
-    program: async () => pulumiProgram(config),
+    program: () => pulumiProgram(config),
   },
   // It looks like ARM_STORAGE_USE_AZUREAD is used only by legacy Pulumi azure provider, not the new azure-native...
   // additionalParameters: {
