@@ -1,19 +1,23 @@
 import * as resources from "@pulumi/azure-native/resources";
 import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
-import * as authorization from "@pulumi/azure-native/authorization";
-import * as azureConfig from "@pulumi/azure-native/config";
+// import * as authorization from "@pulumi/azure-native/authorization";
+// import * as azureConfig from "@pulumi/azure-native/config";
+import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import { URL } from "url";
 import * as input from "./input";
 import * as https from "./cdn-https";
 
-const pulumiProgram = async ({
-  organization,
-  environment,
-  domainName,
-  httpsEnabled,
-  ...config
-}: input.Configuration) => {
+const pulumiProgram = async (
+  args: pipeline.AzureBackendPulumiProgramArgs,
+  {
+    organization,
+    environment,
+    domainName,
+    httpsEnabled,
+    ...config
+  }: input.Configuration,
+) => {
   const resourceID = "website";
   // Create RG
   const { name: resourceGroupName, location } =
@@ -99,15 +103,20 @@ const pulumiProgram = async ({
     hostName: domainName,
   });
 
+  // Notice: we can't use "@pulumi/azure-native/config", as the env vars are not passed to this process
   new https.CDNCustomDomainHTTPSResource(
     resourceID,
     {
       domainID: domain.id,
       httpsEnabled,
       azureConfig: {
-        ...(await authorization.getClientConfig()),
-        clientCertificatePath: azureConfig.clientCertificatePath ?? "",
-        clientCertificatePassword: azureConfig.clientCertificatePassword ?? "",
+        tenantId: args.azure.tenantId,
+        subscriptionId: args.azure.subscriptionId,
+        clientId: args.auth.clientId,
+        clientCertificatePath:
+          args.auth.type === "sp"
+            ? https.getClientCertificatePemPath(args.auth.pfxPath)
+            : undefined,
       },
     },
     {

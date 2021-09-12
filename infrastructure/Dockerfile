@@ -10,3 +10,6 @@ COPY --from=pulumi /pulumi/bin/pulumi /pulumi/bin/pulumi
 COPY --from=pulumi /pulumi/bin/*-nodejs* /pulumi/bin/
 COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
 ENV PATH "/pulumi/bin:${PATH}"
+
+# In order not to crash on directory not existing (TODO needs fix in DataHeaving repo)
+RUN mkdir /pulumi-out

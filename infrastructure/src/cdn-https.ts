@@ -51,14 +51,23 @@ const dynamicProviderInputs = t.type(
     //
     // It is because providers are isolated - therefore our custom dynamic provider can't access other provider's configuration
     // More info: https://github.com/pulumi/pulumi/issues/2580#issuecomment-781559171
-    azureConfig: t.type(
-      {
-        clientId: validation.uuid,
-        subscriptionId: validation.uuid,
-        tenantId: validation.uuid,
-        clientCertificatePath: validation.nonEmptyString,
-        clientCertificatePassword: t.string,
-      },
+    azureConfig: t.intersection(
+      [
+        t.type(
+          {
+            clientId: validation.uuid,
+            subscriptionId: validation.uuid,
+            tenantId: validation.uuid,
+          },
+          "CustomDNSHTTPSEnablingInputsAzureConfigMandatory",
+        ),
+        t.partial(
+          {
+            clientCertificatePath: validation.nonEmptyString,
+          },
+          "CustomDNSHTTPSEnablingInputsAzureConfigOptional",
+        ),
+      ],
       "CustomDNSHTTPSEnablingInputsAzureConfig",
     ),
   },
@@ -150,11 +159,13 @@ const constructHttpClient = (
   azureConfig: DynamicProviderInputs["azureConfig"],
 ) =>
   new msRest.ServiceClient(
-    new identity.ClientCertificateCredential(
-      azureConfig.tenantId,
-      azureConfig.clientId,
-      azureConfig.clientCertificatePath,
-    ),
+    azureConfig.clientCertificatePath
+      ? new identity.ClientCertificateCredential(
+          azureConfig.tenantId,
+          azureConfig.clientId,
+          azureConfig.clientCertificatePath,
+        )
+      : new identity.ManagedIdentityCredential(azureConfig.clientId),
     // Uncomment for detailed logging, which also **exposes token values to console output**!
     // {
     //   // add log policy to list of default factories.
@@ -353,7 +364,7 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
   }
 }
 
-const getClientCertificatePemPath = (clientCertificatePfxPath: string) =>
+export const getClientCertificatePemPath = (clientCertificatePfxPath: string) =>
   clientCertificatePfxPath.replace(/\.pfx$/, ".pem");
 
 // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
