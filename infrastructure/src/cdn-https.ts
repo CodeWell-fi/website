@@ -171,7 +171,7 @@ const constructHttpClient = (
     //   // add log policy to list of default factories.
     //   requestPolicyFactories: (factories) =>
     //     factories.concat([msRest.logPolicy()]),
-    // }
+    // },
   );
 
 const urlSuffix = `?api-version=2020-09-01`;
@@ -194,7 +194,7 @@ const performHttpsChange = async (
   let response = await httpClient.sendRequest({
     url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
     method: "POST",
-    body: enableHttps ? JSON.stringify(DefaultHttpsParametersCdn) : undefined,
+    body: enableHttps ? DefaultHttpsParametersCdn : undefined,
   });
   if (response.status !== 200 && response.status !== 202) {
     const errorMsg = `Initial request failed with ${response.status}:\n${response.bodyAsText}.`;
