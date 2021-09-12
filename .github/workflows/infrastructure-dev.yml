@@ -79,8 +79,6 @@ jobs:
             "${DOCKER_IMAGE_ID}" \
             run pulumi-azure-pipeline
 
-          cat "${PULUMI_OUT_DIR}/pulumi-out.json"
-
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
             GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
