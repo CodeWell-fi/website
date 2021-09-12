@@ -1,3 +1,7 @@
+# Package.json
+## Resolutions
+- The `eslint` package is locked to specific version to override CRA's version. With CRA's version, there will be an error: `Error while loading rule 'prettier/prettier': context.getPhysicalFilename is not a function`, and there is [solution explanation online](https://charles-stover.medium.com/resolving-prettier-react-context-getphysicalfilename-is-not-a-function-52a250f68291).
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
