@@ -54,9 +54,9 @@ jobs:
           npm ci
           npm run build
 
-          DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
-          echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
-          cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
+          # DOCKER_IMAGE_ID="infrastructure_run:${GITHUB_RUN_NUMBER}"
+          # echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
+          # cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
 
           # If we don't set NODE_PATH, we will get errors like
           # Error: Cannot find module '@pulumi/pulumi/cmd/dynamic-provider'
@@ -76,7 +76,7 @@ jobs:
             --volume "${PULUMI_OUT_DIR}/:/pulumi-out/:rw" \
             --entrypoint npm \
             --workdir "$(pwd)" \
-            "${DOCKER_IMAGE_ID}" \
+            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
             run pulumi-azure-pipeline
 
           if [[ '${{ github.event_name }}' == 'push' ]]; then
@@ -124,8 +124,9 @@ jobs:
           echo "Building Docker image ${DOCKER_IMAGE_ID} to run the pipeline"
           cat Dockerfile | docker build --tag "${DOCKER_IMAGE_ID}" -
 
-          docker run \
+          echo '{"pulumiCommandOutputFile":""}' | docker run \
             --rm \
+            --interactive \
             --env AZURE_PIPELINE_CONFIG \
             --env WEBSITE_INFRA_CONFIG \
             --env NODE_PATH="$(pwd)/node_modules" \
@@ -133,7 +134,7 @@ jobs:
             --entrypoint npm \
             --workdir "$(pwd)" \
             "${DOCKER_IMAGE_ID}" \
-            run pulumi-azure-pipeline -- up
+            run pulumi-azure-pipeline -- - up
 
           # TODO we must generate release notes for the package
           # TODO set up organization-wide CICD-GitHub account

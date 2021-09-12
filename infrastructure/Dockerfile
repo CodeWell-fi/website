@@ -12,4 +12,4 @@ COPY --from=pulumi /pulumi/bin/pulumi-analyzer-policy /pulumi/bin/
 ENV PATH "/pulumi/bin:${PATH}"
 
 # In order not to crash on directory not existing (TODO needs fix in DataHeaving repo)
-RUN mkdir /pulumi-out
+RUN mkdir /pulumi-out && chmod g+rwx,p+rwx /pulumi-out
