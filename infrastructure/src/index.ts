@@ -36,6 +36,8 @@ const pulumiPipeline: pipeline.PulumiPipelineExport = {
     auth,
   }: pipeline.AzureBackendPulumiProgramArgs) => {
     if (auth.type === "sp") {
+      // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
+      // We must do it here already, as e.g. read method of the provider might be called before creating resource.
       await https.installDynamicProvider(auth.pfxPath, auth.pfxPassword ?? "");
     }
   },

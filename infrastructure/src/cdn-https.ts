@@ -367,8 +367,6 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
 export const getClientCertificatePemPath = (clientCertificatePfxPath: string) =>
   clientCertificatePfxPath.replace(/\.pfx$/, ".pem");
 
-// Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
-// We must do it here already, as e.g. read method of the provider might be called before creating resource.
 export const installDynamicProvider = async (
   clientCertificatePfxPath: string,
   clientCertificatePassword: string,
