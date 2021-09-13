@@ -4,7 +4,8 @@ import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
 import * as t from "io-ts";
 import * as utils from "@data-heaving/common";
-import * as validation from "@data-heaving/common-validation";
+// import * as validation from "@data-heaving/common-validation";
+import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
@@ -51,25 +52,25 @@ const dynamicProviderInputs = t.type(
     //
     // It is because providers are isolated - therefore our custom dynamic provider can't access other provider's configuration
     // More info: https://github.com/pulumi/pulumi/issues/2580#issuecomment-781559171
-    azureConfig: t.intersection(
-      [
-        t.type(
-          {
-            clientId: validation.uuid,
-            subscriptionId: validation.uuid,
-            tenantId: validation.uuid,
-          },
-          "CustomDNSHTTPSEnablingInputsAzureConfigMandatory",
-        ),
-        t.partial(
-          {
-            clientCertificatePath: validation.nonEmptyString,
-          },
-          "CustomDNSHTTPSEnablingInputsAzureConfigOptional",
-        ),
-      ],
-      "CustomDNSHTTPSEnablingInputsAzureConfig",
-    ),
+    // azureConfig: t.intersection(
+    //   [
+    //     t.type(
+    //       {
+    //         clientId: validation.uuid,
+    //         subscriptionId: validation.uuid,
+    //         tenantId: validation.uuid,
+    //       },
+    //       "CustomDNSHTTPSEnablingInputsAzureConfigMandatory",
+    //     ),
+    //     t.partial(
+    //       {
+    //         clientCertificatePath: validation.nonEmptyString,
+    //       },
+    //       "CustomDNSHTTPSEnablingInputsAzureConfigOptional",
+    //     ),
+    //   ],
+    //   "CustomDNSHTTPSEnablingInputsAzureConfig",
+    // ),
   },
   "CustomDNSHTTPSEnablingInputs",
 );
@@ -155,17 +156,20 @@ const constructURLFromDomainID = (domainID: string) =>
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
 
-const constructHttpClient = (
-  azureConfig: DynamicProviderInputs["azureConfig"],
-) =>
-  new msRest.ServiceClient(
-    azureConfig.clientCertificatePath
-      ? new identity.ClientCertificateCredential(
-          azureConfig.tenantId,
-          azureConfig.clientId,
-          azureConfig.clientCertificatePath,
-        )
-      : new identity.ManagedIdentityCredential(azureConfig.clientId),
+const constructHttpClient = () => {
+  if (!currentCredentials) {
+    throw new Error(
+      'Please run "installDynamicProvider" first in order to use this.',
+    );
+  }
+  return new msRest.ServiceClient(
+    typeof currentCredentials === "string"
+      ? new identity.ManagedIdentityCredential(currentCredentials)
+      : new identity.ClientCertificateCredential(
+          currentCredentials.tenantId,
+          currentCredentials.clientId,
+          currentCredentials.pemPath,
+        ),
     // Uncomment for detailed logging, which also **exposes token values to console output**!
     // {
     //   // add log policy to list of default factories.
@@ -173,6 +177,7 @@ const constructHttpClient = (
     //     factories.concat([msRest.logPolicy()]),
     // },
   );
+};
 
 const urlSuffix = `?api-version=2020-09-01`;
 const deserializeCustomDomainResponse = (
@@ -184,13 +189,9 @@ const deserializeCustomDomainResponse = (
 //   JSON.parse(response.body)
 // );
 
-const performHttpsChange = async (
-  domainID: string,
-  enableHttps: boolean,
-  azureConfig: DynamicProviderInputs["azureConfig"],
-) => {
+const performHttpsChange = async (domainID: string, enableHttps: boolean) => {
   const url = constructURLFromDomainID(domainID);
-  const httpClient = constructHttpClient(azureConfig);
+  const httpClient = constructHttpClient();
   let response = await httpClient.sendRequest({
     url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
     method: "POST",
@@ -243,11 +244,7 @@ class CDNCustomDomainResourceProvider
     // Enabling HTTPS is a long (15ish mins at best) operation, and Azure doesn't make it no-op if it is already enabled.
     // So only do it if needed
     if (httpsEnabled !== inputs.httpsEnabled) {
-      await performHttpsChange(
-        inputs.domainID,
-        inputs.httpsEnabled,
-        inputs.azureConfig,
-      );
+      await performHttpsChange(inputs.domainID, inputs.httpsEnabled);
     }
 
     const outs: DynamicProviderOutputs = {
@@ -306,11 +303,7 @@ class CDNCustomDomainResourceProvider
   ): Promise<pulumi.dynamic.UpdateResult> {
     // We have two inputs, domainID causes recreation and thus changing that will not enter here
     // The only remaining possibility is change of httpsEnabled
-    await performHttpsChange(
-      newInputs.domainID,
-      newInputs.httpsEnabled,
-      newInputs.azureConfig,
-    );
+    await performHttpsChange(newInputs.domainID, newInputs.httpsEnabled);
     currentOutputs.httpsEnabled = newInputs.httpsEnabled;
     return {
       outs: currentOutputs,
@@ -320,13 +313,13 @@ class CDNCustomDomainResourceProvider
   async delete(id: string, props: DynamicProviderOutputs): Promise<void> {
     // Deleting this resource => disabling https
     if (props.httpsEnabled) {
-      await performHttpsChange(props.domainID, false, props.azureConfig);
+      await performHttpsChange(props.domainID, false);
     }
   }
 
   private async performRead(currentProps: DynamicProviderInputs, name: string) {
     const customDomainState = deserializeCustomDomainResponse(
-      await constructHttpClient(currentProps.azureConfig).sendRequest({
+      await constructHttpClient().sendRequest({
         url: `${constructURLFromDomainID(currentProps.domainID)}${urlSuffix}`,
         method: "GET",
       }),
@@ -335,7 +328,6 @@ class CDNCustomDomainResourceProvider
       domainID: customDomainState.id,
       httpsEnabled:
         customDomainState.properties.customHttpsProvisioningState === "Enabled",
-      azureConfig: currentProps.azureConfig,
       name,
     };
     return {
@@ -364,32 +356,54 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
   }
 }
 
-export const getClientCertificatePemPath = (clientCertificatePfxPath: string) =>
-  clientCertificatePfxPath.replace(/\.pfx$/, ".pem");
+let currentCredentials:
+  | string
+  | {
+      tenantId: string;
+      clientId: string;
+      pemPath: string;
+    }
+  | undefined;
 
 // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
 // We must do it here already, as e.g. read method of the provider might be called before creating resource.
-export const installDynamicProvider = async (
-  clientCertificatePfxPath: string,
-  clientCertificatePassword: string,
-) => {
-  const passwordEnvName = "PFX_PASSWORD";
-  await execFileAsync(
-    "openssl",
-    [
-      "pkcs12",
-      "-in",
-      clientCertificatePfxPath,
-      "-out",
-      getClientCertificatePemPath(clientCertificatePfxPath),
-      "-nodes",
-      "-password",
-      `env:${passwordEnvName}`,
-    ],
-    {
-      env: {
-        [passwordEnvName]: clientCertificatePassword,
-      },
-    },
-  );
+export const installDynamicProvider = async ({
+  auth,
+  azure,
+}: pipeline.AzureBackendPulumiProgramArgs) => {
+  switch (auth.type) {
+    case "sp":
+      {
+        const passwordEnvName = "PFX_PASSWORD";
+        const pw = auth.pfxPassword ?? "";
+        const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
+        await execFileAsync(
+          "openssl",
+          [
+            "pkcs12",
+            "-in",
+            auth.pfxPath,
+            "-out",
+            pemPath,
+            "-nodes",
+            "-password",
+            `env:${passwordEnvName}`,
+          ],
+          {
+            env: {
+              [passwordEnvName]: pw,
+            },
+          },
+        );
+        currentCredentials = {
+          tenantId: azure.tenantId,
+          clientId: auth.clientId,
+          pemPath,
+        };
+      }
+      break;
+    case "msi":
+      currentCredentials = auth.clientId;
+      break;
+  }
 };
