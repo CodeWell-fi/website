@@ -4,6 +4,7 @@ import * as cdn from "@pulumi/azure-native/cdn";
 import { URL } from "url";
 import * as input from "./input";
 import * as https from "./cdn-https";
+import * as naming from "./naming";
 
 const pulumiProgram = async ({
   organization,
@@ -20,7 +21,7 @@ const pulumiProgram = async ({
   // SA for hosting site files (.html and .js/.css)
   const sa = new storage.StorageAccount(resourceID, {
     resourceGroupName,
-    accountName: `${organization}${environment}site`,
+    accountName: naming.getStorageAccountName(organization, environment),
     sku: {
       name: storage.SkuName.Standard_RAGRS,
     },
@@ -51,9 +52,13 @@ const pulumiProgram = async ({
   });
 
   // Custom DNS setup
+  const { profileName, endpointName } = naming.getCDNEndpointNames(
+    organization,
+    environment,
+  );
   const profile = new cdn.Profile(resourceID, {
     resourceGroupName,
-    profileName: `${organization}-${environment}`,
+    profileName,
     location,
     sku: {
       name: cdn.SkuName.Standard_Microsoft, // Notice: Message="Akamai and Verizon CDN profiles cannot be created with a trial account."
@@ -62,8 +67,8 @@ const pulumiProgram = async ({
   const endpointHost = sa.primaryEndpoints.web.apply((r) => new URL(r).host);
   const endpoint = new cdn.Endpoint(resourceID, {
     resourceGroupName,
-    profileName: profile.name,
-    endpointName: `${organization}-${environment}`,
+    profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
+    endpointName,
     isHttpAllowed: true,
     isHttpsAllowed: true,
     isCompressionEnabled: true,
@@ -124,8 +129,8 @@ const pulumiProgram = async ({
   });
   const domain = new cdn.CustomDomain(resourceID, {
     resourceGroupName,
-    profileName: profile.name,
-    endpointName: endpoint.name,
+    profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
+    endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
     customDomainName: "website",
     hostName: domainName,
   });

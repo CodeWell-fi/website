@@ -1,36 +1,42 @@
 import * as process from "process";
 import * as fs from "fs/promises";
 import * as os from "os";
-import * as t from "io-ts";
+import * as path from "path";
 import * as validation from "@data-heaving/common-validation";
 import * as id from "@azure/identity";
+import * as config from "./config";
+import * as naming from "./naming";
 import deploy from "./deploy";
 
-const pipelineConfig = t.type({
-  azure: t.type({
-    tenantId: validation.uuid,
-    subscriptionId: validation.uuid,
-  }),
-  auth: t.union([
-    t.type({
-      type: t.literal("sp"),
-      clientId: validation.uuid,
-      keyPEM: validation.nonEmptyString,
-      certPEM: validation.nonEmptyString,
-    }),
-    t.type({
-      type: t.literal("msi"),
-      clientId: validation.uuid,
-    }),
-  ]),
-});
+const doThrow = <T>(msg: string): T => {
+  throw new Error(msg);
+};
+
+const pipelineConfigEnvName = "AZURE_PIPELINE_CONFIG";
+const infraConfigEnvName = "WEBSITE_INFRA_CONFIG";
 
 const main = async () => {
-  // 1. Create credentials
+  // 0. Get configs
   const { auth, azure } = validation.decodeOrThrow(
-    pipelineConfig.decode,
-    JSON.parse(process.env.AZURE_PIPELINE_CONFIG ?? ""),
+    config.pipelineConfig.decode,
+    JSON.parse(
+      process.env[pipelineConfigEnvName] ??
+        doThrow(
+          `Please provide pipeline config via "${pipelineConfigEnvName}" environment variable.`,
+        ),
+    ),
   );
+  const { organization, environment, resourceGroupName } =
+    validation.decodeOrThrow(
+      config.infraConfig.decode,
+      JSON.parse(
+        process.env[infraConfigEnvName] ??
+          doThrow(
+            `Please provide infra config via "${infraConfigEnvName}" environment variable.`,
+          ),
+      ),
+    );
+  // 1. Create credentials
   let certPath: string | undefined;
   let credentials: id.TokenCredential;
   switch (auth.type) {
@@ -55,14 +61,16 @@ const main = async () => {
     await deploy({
       credentials,
       websiteContainer: {
-        containerURL: "",
-        webpageDir: "",
+        containerURL: `https://${naming.getStorageAccountName(
+          organization,
+          environment,
+        )}.blob.core.windows.net/$web`,
+        webpageDir: path.normalize(`${process.cwd()}/../website/build`),
       },
       cdnEndpoint: {
         subscriptionId: azure.subscriptionId,
-        resourceGroupName: "",
-        profileName: "",
-        endpointName: "",
+        resourceGroupName,
+        ...naming.getCDNEndpointNames(organization, environment),
       },
     });
   } finally {
