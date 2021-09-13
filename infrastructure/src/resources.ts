@@ -3,21 +3,17 @@ import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
 // import * as authorization from "@pulumi/azure-native/authorization";
 // import * as azureConfig from "@pulumi/azure-native/config";
-import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import { URL } from "url";
 import * as input from "./input";
 import * as https from "./cdn-https";
 
-const pulumiProgram = async (
-  args: pipeline.AzureBackendPulumiProgramArgs,
-  {
-    organization,
-    environment,
-    domainName,
-    httpsEnabled,
-    ...config
-  }: input.Configuration,
-) => {
+const pulumiProgram = async ({
+  organization,
+  environment,
+  domainName,
+  httpsEnabled,
+  ...config
+}: input.Configuration) => {
   const resourceID = "website";
   // Create RG
   const { name: resourceGroupName, location } =
@@ -70,7 +66,7 @@ const pulumiProgram = async (
     resourceGroupName,
     profileName: profile.name,
     endpointName: `${organization}-${environment}`,
-    isHttpAllowed: false,
+    isHttpAllowed: true,
     isHttpsAllowed: true,
     isCompressionEnabled: true,
     originHostHeader: endpointHost,
@@ -92,40 +88,40 @@ const pulumiProgram = async (
         hostName: endpointHost,
         originHostHeader: endpointHost,
         httpsPort: 443,
-        // httpPort: 80,
+        httpPort: 80,
       },
     ],
-    // deliveryPolicy: {
-    //   rules: [
-    //     {
-    //       order: 1,
-    //       name: "EnforceHTTPS",
-    //       conditions: [
-    //         {
-    //           name: "RequestScheme",
-    //           parameters: {
-    //             odataType:
-    //               "#Microsoft.Azure.Cdn.Models.DeliveryRuleRequestSchemeConditionParameters",
-    //             matchValues: ["HTTP"],
-    //             operator: "Equal",
-    //             negateCondition: false,
-    //           },
-    //         },
-    //       ],
-    //       actions: [
-    //         {
-    //           name: "UrlRedirect",
-    //           parameters: {
-    //             odataType:
-    //               "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlRedirectActionParameters",
-    //             redirectType: "Found",
-    //             destinationProtocol: "Https",
-    //           },
-    //         },
-    //       ],
-    //     },
-    //   ],
-    // },
+    deliveryPolicy: {
+      rules: [
+        {
+          order: 1,
+          name: "EnforceHTTPS",
+          conditions: [
+            {
+              name: "RequestScheme",
+              parameters: {
+                odataType:
+                  "#Microsoft.Azure.Cdn.Models.DeliveryRuleRequestSchemeConditionParameters",
+                matchValues: ["HTTP"],
+                operator: "Equal",
+                negateCondition: false,
+              },
+            },
+          ],
+          actions: [
+            {
+              name: "UrlRedirect",
+              parameters: {
+                odataType:
+                  "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlRedirectActionParameters",
+                redirectType: "Found",
+                destinationProtocol: "Https",
+              },
+            },
+          ],
+        },
+      ],
+    },
   });
   const domain = new cdn.CustomDomain(resourceID, {
     resourceGroupName,

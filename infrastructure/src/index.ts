@@ -29,8 +29,7 @@ const pulumiPipeline: pipeline.PulumiPipelineExport = {
     // The https://github.com/DataHeaving/pulumi/blob/main/azure-pipeline-bootstrap cli tool used by bootstrap pipeline guarantees us env-specific storage account container, so project and stack name can be constants
     projectName: "website",
     stackName: "infrastructure",
-    program: (args: pipeline.AzureBackendPulumiProgramArgs) =>
-      pulumiProgram(args, config),
+    program: () => pulumiProgram(config),
   },
   beforePulumiCommandExecution: (
     args: pipeline.AzureBackendPulumiProgramArgs,
