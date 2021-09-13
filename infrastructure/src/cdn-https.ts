@@ -163,7 +163,13 @@ const constructHttpClient = () => {
     );
   }
   return new msRest.ServiceClient(
-    currentCredentials,
+    typeof currentCredentials === "string"
+      ? new identity.ManagedIdentityCredential(currentCredentials)
+      : new identity.ClientCertificateCredential(
+          currentCredentials.tenantId,
+          currentCredentials.clientId,
+          currentCredentials.pemPath,
+        ),
     // Uncomment for detailed logging, which also **exposes token values to console output**!
     // {
     //   // add log policy to list of default factories.
@@ -350,7 +356,14 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
   }
 }
 
-let currentCredentials: identity.TokenCredential | undefined;
+let currentCredentials:
+  | string
+  | {
+      tenantId: string;
+      clientId: string;
+      pemPath: string;
+    }
+  | undefined;
 
 // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
 // We must do it here already, as e.g. read method of the provider might be called before creating resource.
@@ -382,17 +395,15 @@ export const installDynamicProvider = async ({
             },
           },
         );
-        currentCredentials = new identity.ClientCertificateCredential(
-          azure.tenantId,
-          auth.clientId,
+        currentCredentials = {
+          tenantId: azure.tenantId,
+          clientId: auth.clientId,
           pemPath,
-        );
+        };
       }
       break;
     case "msi":
-      currentCredentials = new identity.ManagedIdentityCredential(
-        auth.clientId,
-      );
+      currentCredentials = auth.clientId;
       break;
   }
 };
