@@ -1,6 +1,6 @@
 {
   "name": "code-well-site-infrastructure",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Stanislav Muhametsin",
     "email": "346799+stazz@users.noreply.github.com",
@@ -29,7 +29,7 @@
     "@pulumi/pulumi": "3.12.0"
   },
   "devDependencies": {
-    "@data-heaving/pulumi-azure-pipeline": "1.5.2",
+    "@data-heaving/pulumi-azure-pipeline": "1.5.3",
     "@types/node": "16.7.4",
     "@typescript-eslint/eslint-plugin": "4.30.0",
     "@typescript-eslint/parser": "4.30.0",

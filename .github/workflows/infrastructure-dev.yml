@@ -63,17 +63,23 @@ jobs:
           # fatal: error An assertion has failed: could not get workspace path. source error: getting current user: luser: unable to get current user
 
           PULUMI_OUT_DIR="$(mktemp -d)"
-          docker run \
-            --rm \
-            --env AZURE_PIPELINE_CONFIG \
-            --env WEBSITE_INFRA_CONFIG \
-            --env NODE_PATH="$(pwd)/node_modules" \
-            --volume "$(pwd)/:$(pwd)/:ro" \
-            --volume "${PULUMI_OUT_DIR}/:/pulumi-out/:rw" \
-            --entrypoint npm \
-            --workdir "$(pwd)" \
-            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
-            run pulumi-azure-pipeline
+          function pulumi()
+          {
+            docker run \
+              --rm \
+              --env AZURE_PIPELINE_CONFIG \
+              --env WEBSITE_INFRA_CONFIG \
+              --env NODE_PATH="$(pwd)/node_modules" \
+              --volume "$(pwd)/:$(pwd)/:ro" \
+              --volume "${PULUMI_OUT_DIR}/:/pulumi-out/:rw" \
+              --entrypoint npm \
+              --workdir "$(pwd)" \
+              "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
+              run pulumi-azure-pipeline "$@"
+          }
+
+          pulumi refresh
+          pulumi preview
 
           if [[ '${{ github.event_name }}' == 'push' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
