@@ -92,8 +92,40 @@ const pulumiProgram = async (
         hostName: endpointHost,
         originHostHeader: endpointHost,
         httpsPort: 443,
+        // httpPort: 80,
       },
     ],
+    // deliveryPolicy: {
+    //   rules: [
+    //     {
+    //       order: 1,
+    //       name: "EnforceHTTPS",
+    //       conditions: [
+    //         {
+    //           name: "RequestScheme",
+    //           parameters: {
+    //             odataType:
+    //               "#Microsoft.Azure.Cdn.Models.DeliveryRuleRequestSchemeConditionParameters",
+    //             matchValues: ["HTTP"],
+    //             operator: "Equal",
+    //             negateCondition: false,
+    //           },
+    //         },
+    //       ],
+    //       actions: [
+    //         {
+    //           name: "UrlRedirect",
+    //           parameters: {
+    //             odataType:
+    //               "#Microsoft.Azure.Cdn.Models.DeliveryRuleUrlRedirectActionParameters",
+    //             redirectType: "Found",
+    //             destinationProtocol: "Https",
+    //           },
+    //         },
+    //       ],
+    //     },
+    //   ],
+    // },
   });
   const domain = new cdn.CustomDomain(resourceID, {
     resourceGroupName,
@@ -109,15 +141,6 @@ const pulumiProgram = async (
     {
       domainID: domain.id,
       httpsEnabled,
-      azureConfig: {
-        tenantId: args.azure.tenantId,
-        subscriptionId: args.azure.subscriptionId,
-        clientId: args.auth.clientId,
-        clientCertificatePath:
-          args.auth.type === "sp"
-            ? https.getClientCertificatePemPath(args.auth.pfxPath)
-            : undefined,
-      },
     },
     {
       parent: domain,
