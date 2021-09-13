@@ -156,8 +156,13 @@ const constructURLFromDomainID = (domainID: string) =>
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
 
-const constructHttpClient = () =>
-  new msRest.ServiceClient(
+const constructHttpClient = () => {
+  if (!currentCredentials) {
+    throw new Error(
+      'Please run "installDynamicProvider" first in order to use this.',
+    );
+  }
+  return new msRest.ServiceClient(
     currentCredentials,
     // Uncomment for detailed logging, which also **exposes token values to console output**!
     // {
@@ -166,6 +171,7 @@ const constructHttpClient = () =>
     //     factories.concat([msRest.logPolicy()]),
     // },
   );
+};
 
 const urlSuffix = `?api-version=2020-09-01`;
 const deserializeCustomDomainResponse = (
