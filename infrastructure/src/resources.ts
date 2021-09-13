@@ -27,7 +27,7 @@ const pulumiProgram = async ({
     },
     location,
     kind: storage.Kind.StorageV2,
-    enableHttpsTrafficOnly: true,
+    enableHttpsTrafficOnly: true, // We will handle http -> https redirect in CDN profile
     accessTier: storage.AccessTier.Hot,
     allowBlobPublicAccess: true, // This will be hosting website, so has to be public
     allowSharedKeyAccess: true, // Nothing like ARM_STORAGE_USE_AZUREAD in azure-native provider yet, so we must still use this
