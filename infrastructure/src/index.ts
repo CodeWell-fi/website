@@ -3,7 +3,7 @@ import * as input from "./input";
 import * as validation from "@data-heaving/common-validation";
 import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import pulumiProgram from "./resources";
-import * as https from "./cdn-https";
+import * as https from "./cdn-https-transient";
 
 const doThrow = <T>(msg: string): T => {
   throw new Error(msg);
