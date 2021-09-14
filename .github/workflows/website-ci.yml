@@ -17,6 +17,7 @@ defaults:
     working-directory: website
 
 env:
+  SKIP_PREFLIGHT_CHECK: "true"
   INFRA_ENV: dev
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
   ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}

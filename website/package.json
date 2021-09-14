@@ -1,6 +1,16 @@
 {
   "name": "code-well-site",
   "version": "0.1.0",
+  "author": {
+    "name": "Stanislav Muhametsin",
+    "email": "346799+stazz@users.noreply.github.com",
+    "url": "https://github.com/stazz"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodeWell/site.git"
+  },
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "5.11.4",
