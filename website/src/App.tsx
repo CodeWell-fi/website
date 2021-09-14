@@ -19,6 +19,6 @@ const App = () => (
       </a>
     </header>
   </div>
-); // Dummy
+);
 
 export default App;
