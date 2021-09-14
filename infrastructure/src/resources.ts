@@ -127,7 +127,7 @@ const pulumiProgram = async ({
       ],
     },
   });
-  return domainNames.forEach((domainName) => {
+  return domainNames.map((domainName) => {
     const domainID = `${resourceID}-${domainName}`;
     const domain = new cdn.CustomDomain(domainID, {
       resourceGroupName,
