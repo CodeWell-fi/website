@@ -1,6 +1,7 @@
 import logo from "./logo.svg";
 import "./App.css";
 
+// TODO proper site
 const App = () => (
   <div className="App">
     <header className="App-header">
