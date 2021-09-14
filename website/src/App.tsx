@@ -12,7 +12,7 @@ const App = () => (
         target="_blank"
         rel="noopener noreferrer"
       >
-        This site was made with Azure, Pulumi, React, and lots of tea
+        This site was made with Azure, Pulumi, React, and lots of
         <span role="img" aria-label="tea">
           🍵
         </span>
