@@ -4,6 +4,7 @@ import * as id from "@azure/identity";
 import * as storage from "@azure/storage-blob";
 import * as cdn from "@azure/arm-cdn";
 import * as mime from "mime-types";
+import * as events from "./events";
 
 export interface Inputs {
   credentials: id.TokenCredential;
@@ -19,11 +20,14 @@ export interface Inputs {
   };
 }
 
-const deploy = async ({
-  credentials,
-  websiteContainer: { containerURL, webpageDir },
-  cdnEndpoint,
-}: Inputs) => {
+const deploy = async (
+  eventEmitter: events.WebsiteDeployEventEimtter,
+  {
+    credentials,
+    websiteContainer: { containerURL, webpageDir },
+    cdnEndpoint,
+  }: Inputs,
+) => {
   // Delete all the existing files
   const container = new storage.ContainerClient(containerURL, credentials);
   const blobNames: Array<string> = [];
@@ -40,9 +44,13 @@ const deploy = async ({
       credentials,
     );
   }
+  eventEmitter.emit("deletedFilesFromWebsiteContainer", {
+    containerURL,
+    blobNames,
+  });
 
   // Upload all new files
-  const promises: Array<Promise<unknown>> = [];
+  const promises: Array<Promise<storage.BlobUploadCommonResponse>> = [];
   for await (const directoryFiles of getFilesRecursively(webpageDir)) {
     promises.push(
       ...directoryFiles.map((filePath) => {
@@ -58,9 +66,14 @@ const deploy = async ({
       }),
     );
   }
-  await Promise.all(promises);
+  eventEmitter.emit("uploadedFilesToWebsiteContainer", {
+    containerURL,
+    blobs: await Promise.all(promises),
+  });
 
   // Purge CDN caches
+  const contentPaths = ["/*"];
+  eventEmitter.emit("cdnPurgeStarting", { contentPaths: [...contentPaths] });
   await new cdn.CdnManagementClient(
     credentials,
     cdnEndpoint.subscriptionId,
@@ -68,8 +81,23 @@ const deploy = async ({
     cdnEndpoint.resourceGroupName,
     cdnEndpoint.profileName,
     cdnEndpoint.endpointName,
-    ["/*"],
+    contentPaths,
+    {
+      onDownloadProgress: (progress) =>
+        eventEmitter.emit("cdnPurgeProgress", {
+          kind: "download",
+          progress,
+          contentPaths: [...contentPaths],
+        }),
+      onUploadProgress: (progress) =>
+        eventEmitter.emit("cdnPurgeProgress", {
+          kind: "upload",
+          progress,
+          contentPaths: [...contentPaths],
+        }),
+    },
   );
+  eventEmitter.emit("cdnPurgeCompleted", { contentPaths: [...contentPaths] });
 };
 
 // Slightly modified from https://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search
