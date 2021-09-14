@@ -33,7 +33,10 @@ const pulumiPipeline: pipeline.PulumiPipelineExport = {
   },
   beforePulumiCommandExecution: (
     args: pipeline.AzureBackendPulumiProgramArgs,
-  ) => https.installDynamicProvider(args),
+  ) =>
+    // We must do it here already, as e.g. read method of the provider might be called before creating resource.
+    https.installDynamicProvider(args),
+
   // It looks like ARM_STORAGE_USE_AZUREAD is used only by legacy Pulumi azure provider, not the new azure-native...
   // additionalParameters: {
   //   processAdditionalEnvVars: (envVars: Record<string, string>) =>

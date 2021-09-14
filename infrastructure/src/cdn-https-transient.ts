@@ -1,31 +1,37 @@
 import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
 import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
+import { env } from "process";
 import { execFile } from "child_process";
 import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
-let currentCredentials:
+// Pulumi will serialize this whole module into state file. Therefore we use this trick with env name, because Azure credentials may differ between the runs.
+// We can safely assume that tenant and client IDs will remain the same
+const credentialsEnvName =
+  "___PULUMI_CUSTOM_PROVIDER_AZURE_CDN_HTTPS_CREDENTIALS___";
+
+type CredentialsEnvVar =
   | string
   | {
       tenantId: string;
       clientId: string;
       pemPath: string;
-    }
-  | undefined;
+    };
 
 // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
-// We must do it here already, as e.g. read method of the provider might be called before creating resource.
 export const installDynamicProvider = async ({
   auth,
   azure,
 }: pipeline.AzureBackendPulumiProgramArgs) => {
+  let creds: CredentialsEnvVar;
   switch (auth.type) {
     case "sp":
       {
         const passwordEnvName = "PFX_PASSWORD";
         const pw = auth.pfxPassword ?? "";
         const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
+
         await execFileAsync(
           "openssl",
           [
@@ -44,7 +50,8 @@ export const installDynamicProvider = async ({
             },
           },
         );
-        currentCredentials = {
+
+        creds = {
           tenantId: azure.tenantId,
           clientId: auth.clientId,
           pemPath,
@@ -52,17 +59,23 @@ export const installDynamicProvider = async ({
       }
       break;
     case "msi":
-      currentCredentials = auth.clientId;
+      creds = auth.clientId;
       break;
   }
+
+  env[credentialsEnvName] = JSON.stringify(creds);
 };
 
 export const constructHttpClient = () => {
-  if (!currentCredentials) {
+  const currentCredentialsString = env[credentialsEnvName];
+  if (!currentCredentialsString) {
     throw new Error(
       'Please run "installDynamicProvider" first in order to use this.',
     );
   }
+  const currentCredentials = JSON.parse(
+    currentCredentialsString,
+  ) as unknown as CredentialsEnvVar;
   return new msRest.ServiceClient(
     typeof currentCredentials === "string"
       ? new identity.ManagedIdentityCredential(currentCredentials)
