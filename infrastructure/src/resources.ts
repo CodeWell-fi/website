@@ -9,7 +9,7 @@ import * as naming from "./naming";
 const pulumiProgram = async ({
   organization,
   environment,
-  domainName,
+  domainNames,
   httpsEnabled,
   ...config
 }: input.Configuration) => {
@@ -127,29 +127,31 @@ const pulumiProgram = async ({
       ],
     },
   });
-  const domain = new cdn.CustomDomain(resourceID, {
-    resourceGroupName,
-    profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
-    endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
-    customDomainName: "website",
-    hostName: domainName,
+  return domainNames.forEach((domainName) => {
+    const domainID = `${resourceID}-${domainName}`;
+    const domain = new cdn.CustomDomain(domainID, {
+      resourceGroupName,
+      profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
+      endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
+      customDomainName: "website",
+      hostName: domainName,
+    });
+
+    new https.CDNCustomDomainHTTPSResource(
+      domainID,
+      {
+        domainID: domain.id,
+        httpsEnabled,
+      },
+      {
+        parent: domain,
+      },
+    );
+    return {
+      domainName,
+      httpsState: domain.customHttpsProvisioningState,
+    };
   });
-
-  new https.CDNCustomDomainHTTPSResource(
-    resourceID,
-    {
-      domainID: domain.id,
-      httpsEnabled,
-    },
-    {
-      parent: domain,
-    },
-  );
-
-  return {
-    domainName,
-    domainHttpsState: domain.customHttpsProvisioningState,
-  };
 };
 
 export default pulumiProgram;

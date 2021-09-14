@@ -5,7 +5,7 @@ export const configuration = t.type({
   resourceGroupName: validation.nonEmptyString,
   organization: validation.nonEmptyString,
   environment: validation.nonEmptyString,
-  domainName: validation.nonEmptyString,
+  domainNames: t.array(validation.nonEmptyString),
   httpsEnabled: t.boolean,
 });
 
