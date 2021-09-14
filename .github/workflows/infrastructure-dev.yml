@@ -26,7 +26,7 @@ env:
       "resourceGroupName": "codewell-dev-managed-site",
       "organization": "codewell",
       "environment": "dev",
-      "domainName": "dev.codewell.fi",
+      "domainNames": [ "dev.codewell.fi" ],
       "httpsEnabled": true
     }
 

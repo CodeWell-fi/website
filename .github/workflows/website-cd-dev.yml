@@ -16,8 +16,8 @@ env:
   WEBSITE_INFRA_CONFIG: | # Schema of this is in website/src/config.ts file
     {
       "organization": "codewell",
-      "environment": "dev"
-      "resourceGroupName": "codewell-dev-managed-site",
+      "environment": "dev",
+      "resourceGroupName": "codewell-dev-managed-site"
     }
 
 jobs:
@@ -28,6 +28,9 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1 # No need to get full history
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
       - uses: dawidd6/action-download-artifact@v2
         name: Download build artifact
         with:
@@ -35,11 +38,8 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
           name: site-contents
           path: website/build
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 16
       - id: preview
-        name: Build website
+        name: Deploy website
         run: |
           set -e
 
