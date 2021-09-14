@@ -25,6 +25,10 @@ const main = async () => {
           `Please provide pipeline config via "${pipelineConfigEnvName}" environment variable.`,
         ),
     ),
+    () => {
+      // Throw custom error to avoid potentially leaking secret contents as error messages
+      throw new Error("The supplied Azure pipeline configuration was invalid");
+    },
   );
   const { organization, environment, resourceGroupName } =
     validation.decodeOrThrow(

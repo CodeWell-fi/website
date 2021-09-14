@@ -33,8 +33,8 @@ jobs:
         with:
           workflow: website-ci.yml
           run_id: ${{ github.event.workflow_run.id }}
-          name: build.zip
-          path: website
+          name: site-contents
+          path: website/build
       - uses: actions/setup-node@v2
         with:
           node-version: 16
@@ -44,4 +44,5 @@ jobs:
           set -e
 
           npm ci
+          cp ../infrastructure/src/naming.ts src
           npm run deploy

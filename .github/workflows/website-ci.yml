@@ -54,7 +54,7 @@ jobs:
           yarn run test:coverage
       # Artifact will be used by CD pipeline - but only upload it when not doing PR run
       - uses: actions/upload-artifact@v2
-        # if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' }}
         with:
           name: site-contents
           path: website/build/
