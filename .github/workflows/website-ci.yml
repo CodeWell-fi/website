@@ -1,0 +1,61 @@
+name: Website CI Pipeline
+on:
+  push:
+    branches:
+    - main
+    paths:
+    - 'website/**'
+  pull_request:
+    branches:
+    - main
+    paths:
+    - 'website/**'
+
+defaults:
+  run:
+    shell: bash
+    working-directory: website
+
+env:
+  SKIP_PREFLIGHT_CHECK: "true"
+  INFRA_ENV: dev
+  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+  WEBSITE_INFRA_CONFIG: | # Schema of this is in website/src/config.ts file
+    {
+      "resourceGroupName": "codewell-dev-managed-site",
+      "organization": "codewell",
+      "environment": "dev"
+    }
+
+jobs:
+  build_and_test:
+    name: Build and test website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1 # No need to get full history
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: preview
+        name: Build and test website
+        run: |
+          set -e
+
+          yarn install --frozen-lock-file
+
+          # The tests don't need build result (since using TS-Jest), build performs TS compilation so will catch any type errors in files not included in tests
+          yarn run build
+
+          # Run the tests
+          yarn run test:coverage
+      # Artifact will be used by CD pipeline - but only upload it when not doing PR run
+      - uses: actions/upload-artifact@v2
+        if: ${{ github.event_name == 'push' }}
+        with:
+          name: site-contents
+          path: website/build/
+      

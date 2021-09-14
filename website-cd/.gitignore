@@ -1,0 +1,2 @@
+# Will be copied from infrastructure/src folder by CD pipeline
+src/naming.ts

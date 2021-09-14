@@ -1,0 +1,48 @@
+name: Website CD Pipeline - DEV
+on:
+  workflow_run:
+    workflows: [ "Website CI Pipeline" ]
+    branches: [ main ]
+    types: [ completed ]
+
+defaults:
+  run:
+    shell: bash
+    working-directory: website-cd
+env:
+  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+  WEBSITE_INFRA_CONFIG: | # Schema of this is in website/src/config.ts file
+    {
+      "organization": "codewell",
+      "environment": "dev"
+      "resourceGroupName": "codewell-dev-managed-site",
+    }
+
+jobs:
+  perform-cd:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1 # No need to get full history
+      - uses: dawidd6/action-download-artifact@v2
+        name: Download build artifact
+        with:
+          workflow: website-ci.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: site-contents
+          path: website/build
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: preview
+        name: Build website
+        run: |
+          set -e
+
+          npm ci
+          cp ../infrastructure/src/naming.ts src
+          npm run deploy

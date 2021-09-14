@@ -1,15 +1,11 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as azureUtils from "@pulumi/azure-native/utilities";
-import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
 import * as t from "io-ts";
 import * as utils from "@data-heaving/common";
+import * as transient from "./cdn-https-transient";
 // import * as validation from "@data-heaving/common-validation";
-import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
-import { execFile } from "child_process";
-import { promisify } from "util";
 
-const execFileAsync = promisify(execFile);
 // Notice! The validation objects in io-ts library can not be used by Pulumi Dynamic Custom Provider ( CDNCustomDomainResourceProvider class below ).
 // The reason is that if the validation objects are used, the Pulumi fails with the following error
 //
@@ -156,29 +152,6 @@ const constructURLFromDomainID = (domainID: string) =>
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
 
-const constructHttpClient = () => {
-  if (!currentCredentials) {
-    throw new Error(
-      'Please run "installDynamicProvider" first in order to use this.',
-    );
-  }
-  return new msRest.ServiceClient(
-    typeof currentCredentials === "string"
-      ? new identity.ManagedIdentityCredential(currentCredentials)
-      : new identity.ClientCertificateCredential(
-          currentCredentials.tenantId,
-          currentCredentials.clientId,
-          currentCredentials.pemPath,
-        ),
-    // Uncomment for detailed logging, which also **exposes token values to console output**!
-    // {
-    //   // add log policy to list of default factories.
-    //   requestPolicyFactories: (factories) =>
-    //     factories.concat([msRest.logPolicy()]),
-    // },
-  );
-};
-
 const urlSuffix = `?api-version=2020-09-01`;
 const deserializeCustomDomainResponse = (
   response: msRest.HttpOperationResponse,
@@ -191,7 +164,7 @@ const deserializeCustomDomainResponse = (
 
 const performHttpsChange = async (domainID: string, enableHttps: boolean) => {
   const url = constructURLFromDomainID(domainID);
-  const httpClient = constructHttpClient();
+  const httpClient = transient.constructHttpClient();
   let response = await httpClient.sendRequest({
     url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
     method: "POST",
@@ -319,7 +292,7 @@ class CDNCustomDomainResourceProvider
 
   private async performRead(currentProps: DynamicProviderInputs, name: string) {
     const customDomainState = deserializeCustomDomainResponse(
-      await constructHttpClient().sendRequest({
+      await transient.constructHttpClient().sendRequest({
         url: `${constructURLFromDomainID(currentProps.domainID)}${urlSuffix}`,
         method: "GET",
       }),
@@ -355,55 +328,3 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
     );
   }
 }
-
-let currentCredentials:
-  | string
-  | {
-      tenantId: string;
-      clientId: string;
-      pemPath: string;
-    }
-  | undefined;
-
-// Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
-// We must do it here already, as e.g. read method of the provider might be called before creating resource.
-export const installDynamicProvider = async ({
-  auth,
-  azure,
-}: pipeline.AzureBackendPulumiProgramArgs) => {
-  switch (auth.type) {
-    case "sp":
-      {
-        const passwordEnvName = "PFX_PASSWORD";
-        const pw = auth.pfxPassword ?? "";
-        const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
-        await execFileAsync(
-          "openssl",
-          [
-            "pkcs12",
-            "-in",
-            auth.pfxPath,
-            "-out",
-            pemPath,
-            "-nodes",
-            "-password",
-            `env:${passwordEnvName}`,
-          ],
-          {
-            env: {
-              [passwordEnvName]: pw,
-            },
-          },
-        );
-        currentCredentials = {
-          tenantId: azure.tenantId,
-          clientId: auth.clientId,
-          pemPath,
-        };
-      }
-      break;
-    case "msi":
-      currentCredentials = auth.clientId;
-      break;
-  }
-};

@@ -4,13 +4,11 @@ on:
     branches:
     - main
     paths:
-    # Trigger only when there are changes to any code (as opposed to READMEs etc)
     - 'infrastructure/**'
   pull_request:
     branches:
     - main
     paths:
-    # Trigger only when there are changes to any code (as opposed to READMEs etc)
     - 'infrastructure/**'
 
 defaults:
