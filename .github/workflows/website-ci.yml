@@ -45,5 +45,16 @@ jobs:
           set -e
 
           yarn install --frozen-lock-file
-          # We don't need to run build here - the tests run as TS-Jest
+
+          # The tests don't need build result (since using TS-Jest), build performs TS compilation so will catch any type errors in files not included in tests
+          yarn run build
+
+          # Run the tests
           yarn run test:coverage
+      # Artifact will be used by CD pipeline - but only upload it when not doing PR run
+      - uses: actions/upload-artifact@v2
+        # if: ${{ github.event_name == 'push' }}
+        with:
+          name: site-contents
+          path: website/build/
+      
