@@ -6,6 +6,7 @@ import * as validation from "@data-heaving/common-validation";
 import * as id from "@azure/identity";
 import * as config from "./config";
 import * as naming from "./naming";
+import * as events from "./events";
 import deploy from "./deploy";
 
 const doThrow = <T>(msg: string): T => {
@@ -62,21 +63,24 @@ const main = async () => {
       break;
   }
   try {
-    await deploy({
-      credentials,
-      websiteContainer: {
-        containerURL: `https://${naming.getStorageAccountName(
-          organization,
-          environment,
-        )}.blob.core.windows.net/$web`,
-        webpageDir: path.normalize(`${process.cwd()}/../website/build`),
+    await deploy(
+      events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
+      {
+        credentials,
+        websiteContainer: {
+          containerURL: `https://${naming.getStorageAccountName(
+            organization,
+            environment,
+          )}.blob.core.windows.net/$web`,
+          webpageDir: path.normalize(`${process.cwd()}/../website/build`),
+        },
+        cdnEndpoint: {
+          subscriptionId: azure.subscriptionId,
+          resourceGroupName,
+          ...naming.getCDNEndpointNames(organization, environment),
+        },
       },
-      cdnEndpoint: {
-        subscriptionId: azure.subscriptionId,
-        resourceGroupName,
-        ...naming.getCDNEndpointNames(organization, environment),
-      },
-    });
+    );
   } finally {
     if (certPath) {
       await fs.rm(certPath);
