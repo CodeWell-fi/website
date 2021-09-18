@@ -1,25 +1,39 @@
-import logo from "./logo.svg";
-import "./App.css";
+import Header from "./Header";
+import Footer from "./Footer";
+import Main from "./Main";
+import { What, Who, Contact } from "./content";
 
-// TODO proper site
-const App = () => (
-  <div className="App">
-    <header className="App-header">
-      <img src={logo} className="App-logo" alt="logo" />
-      <p>Under construction.</p>
-      <a
-        className="App-link"
-        href="https://github.com/CodeWell-fi/website"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        This site was made with Azure, Pulumi, React, and lots of&nbsp;
-        <span role="img" aria-label="tea">
-          🍵
-        </span>
-      </a>
-    </header>
-  </div>
-);
+const App = () => {
+  return (
+    <>
+      <Header
+        label="Code Well"
+        verticalAnimationText="Code."
+        horizontalAnimationText="Well."
+      />
+      <Main
+        tabGroupUniqueName="main"
+        tabs={[
+          {
+            label: "What",
+            component: What,
+          },
+          {
+            label: "Who",
+            component: Who,
+          },
+          {
+            label: "Contact",
+            component: Contact,
+          },
+        ]}
+      />
+      <Footer
+        label="Source Code"
+        githubLink="https://github.com/CodeWell-fi/website"
+      />
+    </>
+  );
+};
 
 export default App;

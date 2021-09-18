@@ -29,6 +29,7 @@ module.exports = {
     //"function-paren-newline": ["error", "always"],
     "@typescript-eslint/explicit-module-boundary-types": "off", // IDE will show the return types
     "@typescript-eslint/restrict-template-expressions": "off", // We are OK with whatever type within template expressions
+    "@typescript-eslint/no-empty-function": "off", // Empty functions are ok
     "no-useless-return": "error",
     "no-console": "error",
     "react/react-in-jsx-scope": "off", // With React 17, this is no longer needed

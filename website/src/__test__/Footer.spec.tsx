@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import App from "../App";
+import Footer from "../Footer";
 
 test("renders footer", () => {
-  render(<App />);
+  render(<Footer label="Footer" githubLink="" />);
   const linkElement = screen.getByText(
     /This site was made with Azure, Pulumi, React, and lots of/i,
   );
