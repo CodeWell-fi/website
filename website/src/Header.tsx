@@ -36,7 +36,7 @@ const Header = ({
       role="heading"
       aria-label={label}
       aria-level={1}
-      sx={{ typography: "h1", display: "flex" }}
+      sx={{ display: "flex" }}
     >
       <Typography
         sx={{

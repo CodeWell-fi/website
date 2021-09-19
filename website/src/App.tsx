@@ -1,8 +1,8 @@
 import { Container } from "@mui/material";
 import Header from "./Header";
 import Footer from "./Footer";
-import Main from "./Main";
-import { What, Who, Contact } from "./content";
+import Content from "./Content";
+import { What, Who, Contact } from "./sections";
 
 const App = () => {
   return (
@@ -12,7 +12,7 @@ const App = () => {
         verticalAnimationText="Code."
         horizontalAnimationText="Well."
       />
-      <Main
+      <Content
         tabGroupUniqueName="main"
         tabs={[
           {
