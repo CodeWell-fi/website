@@ -35,7 +35,7 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
           left: 0,
           right: 0,
           width: "100%",
-          // backgroundColor: theme.palette.background.default,
+          backgroundColor: theme.palette.primary.light,
         }}
         component="nav"
         ref={navRef}
@@ -55,6 +55,7 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
             zIndex: -1, // position: "relative" will cause content to go over tab bar when scrolling down. This is to patch that.
           };
           if (idx === 0 && topBarOffset !== undefined) {
+            // This will position the first tab at the top of the page. Negative z-index will make sure it will go under the logo and nav bar.
             sx.top = `${-topBarOffset}px`;
           }
           return (

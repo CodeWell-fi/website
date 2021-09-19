@@ -11,28 +11,22 @@ import reportWebVitals from "./reportWebVitals";
 const theme = createTheme({
   palette: {
     primary: {
-      light: "#757ce8",
-      main: "#3f50b5",
-      dark: "#002884",
-      contrastText: "#fff",
+      main: "#546e7a",
     },
     secondary: {
-      light: "#ff7961",
-      main: "#f44336",
-      dark: "#ba000d",
-      contrastText: "#000",
+      main: "#f48fb1",
     },
     background: {
-      default: "#4dabf5",
+      default: "#b0bec5",
     },
   },
-  components: {
-    MuiTypography: {
-      defaultProps: {
-        color: "primary",
-      },
-    },
-  },
+  // components: {
+  //   MuiTypography: {
+  //     defaultProps: {
+  //       color: "primary",
+  //     },
+  //   },
+  // },
 });
 
 d.render(
