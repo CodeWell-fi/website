@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import { keyframes } from "@emotion/react";
 
 const getKeyframes = (
@@ -30,6 +30,7 @@ const Header = ({
   verticalAnimationText,
   horizontalAnimationText,
 }: HeaderProps) => {
+  const theme = useTheme();
   return (
     <Box
       role="heading"
@@ -37,16 +38,17 @@ const Header = ({
       aria-level={1}
       sx={{ typography: "h1", display: "flex" }}
     >
-      <Box
+      <Typography
         sx={{
           display: "inline",
           position: "relative",
           animation: `${getKeyframes("bottom", "+1em")} 1s forwards`,
         }}
+        variant="h1"
       >
         {verticalAnimationText}
-      </Box>
-      <Box
+      </Typography>
+      <Typography
         sx={{
           display: "inline",
           position: "relative",
@@ -54,16 +56,17 @@ const Header = ({
           animation: `${getKeyframes("left", "+2em")} 1s forwards`,
           animationDelay: "0.5s",
         }}
+        variant="h1"
       >
         {horizontalAnimationText}
-      </Box>
+      </Typography>
       <Box
         sx={{
           // This box is only to avoid the horizontal animation text just suddenly appearing and starting moving. By having high z-index element filling the remainder of horizontal space and with solid bg color, it will look like the text is sliding from under the element.
           display: "inline",
           position: "relative",
           zIndex: 10,
-          background: "white", // TODO parametrize from theme variables
+          background: theme.palette.background.default,
           flexGrow: 1,
         }}
       />

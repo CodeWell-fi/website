@@ -1,27 +1,21 @@
 import { ReactNode, ReactElement } from "react";
-import { Box, Container } from "@mui/material";
+import { Box, Container, useTheme } from "@mui/material";
 import { NavBar } from "./ScrollTabs";
 
 interface MainProps {
   tabGroupUniqueName: string;
   tabs: ReadonlyArray<{
     label: ReactNode;
-    component: () => ReactElement; // ElementType
+    component: ReactElement; // ElementType
   }>;
 }
 
-// function a11yProps(index) {
-//   return {
-//     id: `simple-tab-${index}`,
-//     "aria-controls": `simple-tabpanel-${index}`,
-//   };
-// }
-
 const Main = ({ tabGroupUniqueName, tabs }: MainProps) => {
   const getID = (idx: number) => `tab-${tabGroupUniqueName}-${idx}`;
+  const theme = useTheme();
   return (
     <Box sx={{ width: "100%" }}>
-      <Box
+      <Container
         sx={{
           borderBottom: 1,
           borderColor: "divider",
@@ -30,7 +24,7 @@ const Main = ({ tabGroupUniqueName, tabs }: MainProps) => {
           left: 0,
           right: 0,
           width: "100%",
-          backgroundColor: "#fff",
+          backgroundColor: theme.palette.background.default,
         }}
         component="nav"
       >
@@ -40,7 +34,7 @@ const Main = ({ tabGroupUniqueName, tabs }: MainProps) => {
             label,
           }))}
         />
-      </Box>
+      </Container>
       <Container>
         {tabs.map(({ component }, idx) => (
           <Box
@@ -51,7 +45,7 @@ const Main = ({ tabGroupUniqueName, tabs }: MainProps) => {
             }}
             component="article"
           >
-            {component()}
+            {component}
           </Box>
         ))}
       </Container>

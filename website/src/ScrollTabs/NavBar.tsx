@@ -1,4 +1,4 @@
-import { ReactNode, useRef } from "react";
+import { ReactNode, useRef, useEffect } from "react";
 import useScrollSpy from "./useScrollSpy";
 import { Tabs, Tab } from "@mui/material";
 
@@ -12,8 +12,17 @@ export const NavBar = ({ items }: NavBarProps) => {
   const [active, setActive] = useScrollSpy(items, clickedRef);
 
   const tabsHTML = items.map(({ label, hash }, index) => (
-    <Tab value={hash} key={index} label={label} />
+    <Tab value={hash} key={index} label={label} aria-controls={hash} />
   ));
+
+  useEffect(
+    () => () => {
+      if (unsetClickedRef.current) {
+        clearTimeout(unsetClickedRef.current);
+      }
+    },
+    [],
+  );
 
   return (
     <Tabs

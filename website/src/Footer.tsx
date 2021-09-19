@@ -1,10 +1,11 @@
-import { Container, Box, Link } from "@mui/material";
+import { Container, Box, Link, useTheme } from "@mui/material";
 
 export interface FooterProps {
   label: string;
   githubLink: string;
 }
 const Footer = ({ label, githubLink }: FooterProps) => {
+  const theme = useTheme();
   return (
     <Container
       sx={{
@@ -27,7 +28,7 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           justifyContent: "center",
           paddingBottom: "1rem",
           paddingTop: "1rem",
-          backgroundColor: "#fff",
+          backgroundColor: theme.palette.background.default,
         }}
       >
         <Link href={githubLink} target="_blank" rel="noopener noreferrer">

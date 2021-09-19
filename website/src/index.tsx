@@ -4,40 +4,43 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
-import {
-  CssBaseline,
-  // ThemeProvider,
-  // createTheme,
-  // GlobalStyles,
-} from "@mui/material";
+import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
-// const theme = createTheme({
-//   components: {
-//     MuiCssBaseline: {
-//       styleOverrides: `
-//       body {
-//         min-height: 100vh;
-//       }
-//       `,
-//     },
-//   },
-// });
+const theme = createTheme({
+  palette: {
+    primary: {
+      light: "#757ce8",
+      main: "#3f50b5",
+      dark: "#002884",
+      contrastText: "#fff",
+    },
+    secondary: {
+      light: "#ff7961",
+      main: "#f44336",
+      dark: "#ba000d",
+      contrastText: "#000",
+    },
+    background: {
+      default: "#4dabf5",
+    },
+  },
+  components: {
+    MuiTypography: {
+      defaultProps: {
+        color: "primary",
+      },
+    },
+  },
+});
 
-// Instead of rendering to body, we can customize its CSS
-// More info on why not render directly to body: https://github.com/facebook/create-react-app/issues/1568#issuecomment-280139884
 d.render(
   <r.StrictMode>
-    <CssBaseline />
-    {/* <GlobalStyles
-      styles={{
-        body: {
-
-        },
-      }}
-    /> */}
-    <App />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
   </r.StrictMode>,
   document.getElementById("root"),
 );

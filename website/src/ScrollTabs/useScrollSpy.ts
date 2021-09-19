@@ -24,7 +24,9 @@ const useScrollSpy = (
     itemsWithNodeRef.current = getItemsClient(items);
   }, [items]);
 
-  const [activeState, setActiveState] = useState<string | null>(null);
+  const [activeState, setActiveState] = useState<string | undefined>(
+    items[0]?.hash,
+  );
 
   const findActiveIndex = useCallback(() => {
     // Don't set the active index based on scroll if a link was just clicked
