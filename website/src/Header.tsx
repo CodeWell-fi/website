@@ -30,12 +30,15 @@ const Header = ({
   verticalAnimationText,
   horizontalAnimationText,
 }: HeaderProps) => {
+  const level = 2;
+  const variant = `h${level}` as const;
   const theme = useTheme();
+
   return (
     <Box
       role="heading"
       aria-label={label}
-      aria-level={1}
+      aria-level={level}
       sx={{ display: "flex" }}
     >
       <Typography
@@ -44,7 +47,7 @@ const Header = ({
           position: "relative",
           animation: `${getKeyframes("bottom", "+1em")} 1s forwards`,
         }}
-        variant="h1"
+        variant={variant}
       >
         {verticalAnimationText}
       </Typography>
@@ -56,7 +59,7 @@ const Header = ({
           animation: `${getKeyframes("left", "+2em")} 1s forwards`,
           animationDelay: "0.5s",
         }}
-        variant="h1"
+        variant={variant}
       >
         {horizontalAnimationText}
       </Typography>
