@@ -30,9 +30,13 @@ export const NavBar = ({ items }: NavBarProps) => {
       onChange={(_, hash: string) => {
         clickedRef.current = true; // Disable scrollSpy reacting to this scroll
         // Make sure we re-enable scrollSpy reacting to scrolls
-        unsetClickedRef.current = setTimeout(() => {
-          clickedRef.current = false;
-        }, 1000);
+        unsetClickedRef.current = setTimeout(
+          // eslint-disable-next-line @typescript-eslint/no-implied-eval
+          (() => {
+            clickedRef.current = false;
+          }) as TimerHandler, // We must use this in order for compiler not to get confused with Node's setTimeout which is visible because of CRA.
+          1000,
+        );
         // Perform scroll
         if (active !== hash) {
           setActive(hash);
