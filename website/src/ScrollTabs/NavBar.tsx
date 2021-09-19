@@ -8,7 +8,7 @@ export interface NavBarProps {
 
 export const NavBar = ({ items }: NavBarProps) => {
   const clickedRef = useRef(false);
-  const unsetClickedRef = useRef<NodeJS.Timeout | null>(null);
+  const unsetClickedRef = useRef<number | null>(null);
   const [active, setActive] = useScrollSpy(items, clickedRef);
 
   const tabsHTML = items.map(({ label, hash }, index) => (
