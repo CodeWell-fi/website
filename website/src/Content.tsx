@@ -25,7 +25,7 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
     }
   }, []); // Run this only once as we don't have any dynamic elements in UI
   return (
-    <Box sx={{ width: "100%" }}>
+    <Container sx={{ width: "100%" }}>
       <Container
         sx={{
           borderBottom: 1,
@@ -72,7 +72,7 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
           );
         })}
       </Container>
-    </Box>
+    </Container>
   );
 };
 

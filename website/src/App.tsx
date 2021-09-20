@@ -1,4 +1,3 @@
-import { Container } from "@mui/material";
 import Header from "./Header";
 import Footer from "./Footer";
 import Content from "./Content";
@@ -6,7 +5,7 @@ import { What, Who, Contact } from "./sections";
 
 const App = () => {
   return (
-    <Container>
+    <>
       <Header
         label="Code Well"
         verticalAnimationText="Code."
@@ -33,7 +32,7 @@ const App = () => {
         label="Source Code"
         githubLink="https://github.com/CodeWell-fi/website"
       />
-    </Container>
+    </>
   );
 };
 
