@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 import { Box, Container, Typography, useTheme } from "@mui/material";
 import { SxProps } from "@mui/system";
 import { keyframes } from "@emotion/react";
@@ -33,10 +33,34 @@ const Header = ({
   const level = 2;
   const variant = `h${level}` as const;
   const theme = useTheme();
+  const downSlideElementRef = useRef<HTMLElement>(null);
   const leftSlideElementRef = useRef<HTMLElement>(null);
   const [overlapBoxSx, setOverlapBoxSx] = useState<SxProps<
     typeof theme
   > | null>(null);
+
+  // Overlap box states:
+  // 1. initial -> with useLayoutEffect, set it beginning where first typography ends
+  // 2. animation start -> move left border to right
+  // 3. animation end -> delete box
+  useLayoutEffect(() => {
+    const { current: downSlideElement } = downSlideElementRef;
+    const { current: leftSlideElement } = leftSlideElementRef;
+    if (downSlideElement && leftSlideElement) {
+      const shrect = downSlideElement.getBoundingClientRect();
+      setOverlapBoxSx({
+        position: "absolute",
+        width: "100%",
+        height: shrect.height,
+        left: shrect.right,
+        top: leftSlideElement.getBoundingClientRect().top,
+        margin: "0",
+        padding: "0",
+        zIndex: 10,
+        background: theme.palette.background.default,
+      });
+    }
+  }, []);
 
   return (
     <>
@@ -60,6 +84,7 @@ const Header = ({
             transform: "translateY(-200%)",
           }}
           variant={variant}
+          ref={downSlideElementRef}
         >
           {verticalAnimationText}
         </Typography>
@@ -70,7 +95,7 @@ const Header = ({
             opacity: 0,
             // animation: `${getKeyframes("left", "+2em")} 1s forwards`,
             animation: `${getKeyframes2("left")} 1s forwards`,
-            animationDelay: "1.5s",
+            animationDelay: "3.5s",
             transform: "translateX(100%)",
           }}
           variant={variant}
@@ -86,7 +111,6 @@ const Header = ({
                 height: shrect.height,
                 left: shrect.left,
                 top: shrect.top,
-                boxSizing: "border-box",
                 margin: "0",
                 padding: "0",
                 zIndex: 10,
