@@ -1,4 +1,4 @@
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, Container, Typography, useTheme } from "@mui/material";
 import { keyframes } from "@emotion/react";
 
 const getKeyframes = (
@@ -35,7 +35,7 @@ const Header = ({
   const theme = useTheme();
 
   return (
-    <Box
+    <Container
       role="heading"
       aria-label={label}
       aria-level={level}
@@ -73,7 +73,7 @@ const Header = ({
           flexGrow: 1,
         }}
       />
-    </Box>
+    </Container>
   );
 };
 
