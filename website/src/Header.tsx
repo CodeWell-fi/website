@@ -82,7 +82,7 @@ const Header = ({
             opacity: 0,
             // animation: `${getKeyframes("bottom", "+1em")} 1s forwards`,
             animation: `${getKeyframes2("down")} 1s forwards`,
-            animationDelay: "4.5s",
+            animationDelay: "0.5s",
             transform: "translateY(-200%)",
           }}
           variant={variant}
@@ -97,7 +97,7 @@ const Header = ({
             opacity: 0,
             // animation: `${getKeyframes("left", "+2em")} 1s forwards`,
             animation: `${getKeyframes2("left")} 1s forwards`,
-            animationDelay: "5.5s",
+            animationDelay: "1.5s",
             transform: "translateX(100%)",
           }}
           variant={variant}
