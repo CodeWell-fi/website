@@ -39,6 +39,7 @@ const Header = ({
     typeof theme
   > | null>(null);
 
+  // Overlap box is only to avoid the horizontal animation text just suddenly appearing and starting moving. By having high z-index element filling the remainder of horizontal space and with solid bg color, it will look like the text is sliding from under the element.
   // Overlap box states:
   // 1. initial -> with useLayoutEffect, set it beginning where first typography ends
   // 2. animation start -> move left border to right
@@ -47,13 +48,14 @@ const Header = ({
     const { current: downSlideElement } = downSlideElementRef;
     const { current: leftSlideElement } = leftSlideElementRef;
     if (downSlideElement && leftSlideElement) {
-      const shrect = downSlideElement.getBoundingClientRect();
+      const downShrect = downSlideElement.getBoundingClientRect();
+      const leftShrect = leftSlideElement.getBoundingClientRect();
       setOverlapBoxSx({
         position: "absolute",
-        width: "100%",
-        height: shrect.height,
-        left: shrect.right,
-        top: leftSlideElement.getBoundingClientRect().top,
+        width: `calc(100% - ${downShrect.right}px)`,
+        height: downShrect.height,
+        left: downShrect.right,
+        top: leftShrect.top,
         margin: "0",
         padding: "0",
         zIndex: 10,
@@ -80,7 +82,7 @@ const Header = ({
             opacity: 0,
             // animation: `${getKeyframes("bottom", "+1em")} 1s forwards`,
             animation: `${getKeyframes2("down")} 1s forwards`,
-            animationDelay: "0.5s",
+            animationDelay: "4.5s",
             transform: "translateY(-200%)",
           }}
           variant={variant}
@@ -95,7 +97,7 @@ const Header = ({
             opacity: 0,
             // animation: `${getKeyframes("left", "+2em")} 1s forwards`,
             animation: `${getKeyframes2("left")} 1s forwards`,
-            animationDelay: "3.5s",
+            animationDelay: "5.5s",
             transform: "translateX(100%)",
           }}
           variant={variant}
@@ -103,14 +105,13 @@ const Header = ({
           onAnimationStart={() => {
             const { current: leftSlideElement } = leftSlideElementRef;
             if (leftSlideElement) {
-              const shrect = leftSlideElement.getBoundingClientRect();
-              // eslint-disable-next-line
+              const leftShrect = leftSlideElement.getBoundingClientRect();
               setOverlapBoxSx({
                 position: "absolute",
-                width: "100%",
-                height: shrect.height,
-                left: shrect.left,
-                top: shrect.top,
+                width: `calc(100% - ${leftShrect.left}px)`,
+                height: leftShrect.height,
+                left: leftShrect.left,
+                top: leftShrect.top,
                 margin: "0",
                 padding: "0",
                 zIndex: 10,
@@ -125,10 +126,7 @@ const Header = ({
           {horizontalAnimationText}
         </Typography>
       </Container>
-      {
-        // This box is only to avoid the horizontal animation text just suddenly appearing and starting moving. By having high z-index element filling the remainder of horizontal space and with solid bg color, it will look like the text is sliding from under the element.
-        overlapBoxSx ? <Box component={variant} sx={overlapBoxSx} /> : undefined
-      }
+      {overlapBoxSx ? <Box component={variant} sx={overlapBoxSx} /> : undefined}
     </>
   );
 };
