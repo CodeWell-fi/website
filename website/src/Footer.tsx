@@ -31,7 +31,12 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           backgroundColor: theme.palette.background.default,
         }}
       >
-        <Link href={githubLink} target="_blank" rel="noopener noreferrer">
+        <Link
+          href={githubLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          typography="subtitle2"
+        >
           This site was made with Azure, Pulumi, React, and lots of&nbsp;
           <span role="img" aria-label="tea">
             🍵
