@@ -4,30 +4,37 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import {
+  CssBaseline,
+  ThemeProvider,
+  createTheme,
+  responsiveFontSizes,
+} from "@mui/material";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#546e7a",
+const theme = responsiveFontSizes(
+  createTheme({
+    palette: {
+      primary: {
+        main: "#546e7a",
+      },
+      secondary: {
+        main: "#f48fb1",
+      },
+      background: {
+        default: "#b0bec5",
+      },
     },
-    secondary: {
-      main: "#f48fb1",
-    },
-    background: {
-      default: "#b0bec5",
-    },
-  },
-  // components: {
-  //   MuiTypography: {
-  //     defaultProps: {
-  //       color: "primary",
-  //     },
-  //   },
-  // },
-});
+    // components: {
+    //   MuiTypography: {
+    //     defaultProps: {
+    //       color: "primary",
+    //     },
+    //   },
+    // },
+  }),
+);
 
 d.render(
   <r.StrictMode>

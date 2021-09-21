@@ -30,7 +30,7 @@ const Header = ({
   verticalAnimationText,
   horizontalAnimationText,
 }: HeaderProps) => {
-  const level = 2;
+  const level = 1;
   const variant = `h${level}` as const;
   const theme = useTheme();
   const downSlideElementRef = useRef<HTMLElement>(null);
