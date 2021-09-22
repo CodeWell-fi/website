@@ -50,7 +50,7 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
       <Container>
         {tabs.map(({ component }, idx) => {
           const sx: SxProps<typeof theme> = {
-            minHeight: "90vh",
+            minHeight: "100vh",
             position: "relative", // This is to allow to center content vertically
             zIndex: -1, // position: "relative" will cause content to go over tab bar when scrolling down. This is to patch that.
           };
