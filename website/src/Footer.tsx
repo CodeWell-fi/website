@@ -28,7 +28,7 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           justifyContent: "center",
           paddingBottom: "1rem",
           paddingTop: "1rem",
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: theme.palette.primary.dark, // theme.palette.background.default,
         }}
       >
         <Link
@@ -36,6 +36,7 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           target="_blank"
           rel="noopener noreferrer"
           typography="subtitle2"
+          color={theme.palette.primary.light}
         >
           This site was made with Azure, Pulumi, React, and lots of&nbsp;
           <span role="img" aria-label="tea">
