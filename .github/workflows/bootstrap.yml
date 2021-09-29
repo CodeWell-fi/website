@@ -28,10 +28,10 @@ jobs:
           set -e
 
           CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
-          # if [[ "${CURRENT_BRANCH}" != "main" ]]; then
-          #   echo 'This action can only be run on main branch!' 1>&2
-          #   exit 1
-          # fi
+          if [[ "${CURRENT_BRANCH}" != "main" ]]; then
+            echo 'This action can only be run on main branch!' 1>&2
+            exit 1
+          fi
           
           npm ci
           docker run \
