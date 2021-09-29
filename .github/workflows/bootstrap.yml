@@ -31,6 +31,7 @@ jobs:
           # fi
           
           npm ci
+          ls -al node_modules/@azure/identity
           docker run \
             --rm \
             --env BOOTSTRAP_PIPELINE_CONFIG \
