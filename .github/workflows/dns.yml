@@ -40,7 +40,7 @@ jobs:
           set -e
 
           echo 'Reacting to Github event ${{ github.event_name }}.'
-          npm ci
+          npm ci --ignore-scripts
           npm run build
 
           # If we don't set NODE_PATH, we will get errors like
@@ -110,7 +110,7 @@ jobs:
         run: |
           set -e
 
-          npm ci
+          npm ci --ignore-scripts
           npm run build
 
           # Disable creation of output file by setting it to empty string
