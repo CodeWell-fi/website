@@ -23,7 +23,7 @@ const createRecordType = <P extends t.Props, TRecordType extends RecordType>(
   t.type(
     {
       type: t.literal(recordType),
-      relativeName: validation.nonEmptyString,
+      relativeName: t.string,
       ttl: t.Integer,
       ...props,
     },
