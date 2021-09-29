@@ -1,0 +1,24 @@
+{
+  "organization": "codewell",
+  "location": "westeurope",
+  "dnsZoneName": "codewell.fi",
+  "additionalRecords": [
+    {
+      "type": "MX",
+      "relativeName": "",
+      "ttl": 3600,
+      "exchange": "mail09.domainhotelli.fi",
+      "priority": 0
+    },
+    {
+      "type": "CNAME",
+      "relativeName": "www",
+      "ttl": 3600,
+      "cname": "codewell.fi"
+    }
+  ],
+  "dnsZoneContributorSPNames": [
+    "codewell-dev-deployer",
+    "codewell-prod-deployer"
+  ]
+}
