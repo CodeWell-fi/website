@@ -8,7 +8,7 @@
       "relativeName": "",
       "ttl": 3600,
       "exchange": "mail09.domainhotelli.fi",
-      "priority": 0
+      "preference": 0
     },
     {
       "type": "CNAME",
