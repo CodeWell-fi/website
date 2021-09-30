@@ -1,0 +1,23 @@
+{
+  "resourceGroupName": "codewell-dns-managed-site",
+  "dnsZoneName": "codewell.fi",
+  "additionalRecords": [
+    {
+      "type": "MX",
+      "relativeName": "@",
+      "ttl": 3600,
+      "exchange": "mail09.domainhotelli.fi",
+      "preference": 0
+    },
+    {
+      "type": "CNAME",
+      "relativeName": "www",
+      "ttl": 3600,
+      "cname": "codewell.fi"
+    }
+  ],
+  "dnsZoneContributorSPNames": [
+    "codewell-dev-deployer",
+    "codewell-prod-deployer"
+  ]
+}

@@ -1,0 +1,151 @@
+import * as resources from "@pulumi/azure-native/resources";
+import * as authorization from "@pulumi/azure-native/authorization";
+import * as nw from "@pulumi/azure-native/network";
+import * as ad from "@pulumi/azuread";
+import * as input from "./input";
+
+const pulumiProgram = async ({
+  dnsZoneName,
+  additionalRecords,
+  dnsZoneContributorSPNames,
+  ...config
+}: input.Configuration) => {
+  const rg = await resources.getResourceGroup({
+    resourceGroupName: config.resourceGroupName,
+  });
+  const zone = new nw.Zone("dns", {
+    resourceGroupName: rg.name,
+    zoneName: dnsZoneName,
+    zoneType: "Public",
+  });
+  additionalRecords.map((record) => {
+    const commonProps = {
+      resourceGroupName: rg.name,
+      zoneName: zone.name,
+      relativeRecordSetName: record.relativeName,
+      recordType: record.type,
+      ttl: record.ttl,
+    };
+    switch (record.type) {
+      case input.RecordType.A:
+        return new nw.RecordSet(`${record.type}-${record.address}`, {
+          ...commonProps,
+          aRecords: [
+            {
+              ipv4Address: record.address,
+            },
+          ],
+        });
+      case input.RecordType.AAAA:
+        return new nw.RecordSet(`${record.type}-${record.address}`, {
+          ...commonProps,
+          aaaaRecords: [
+            {
+              ipv6Address: record.address,
+            },
+          ],
+        });
+      case input.RecordType.CAA:
+        return new nw.RecordSet(`${record.type}-${record.value}`, {
+          ...commonProps,
+          caaRecords: [
+            {
+              flags: record.flags,
+              value: record.value,
+              tag: record.tag,
+            },
+          ],
+        });
+      case input.RecordType.CNAME:
+        return new nw.RecordSet(`${record.type}-${record.cname}`, {
+          ...commonProps,
+          cnameRecord: {
+            cname: record.cname,
+          },
+        });
+      case input.RecordType.MX:
+        return new nw.RecordSet(`${record.type}-${record.exchange}`, {
+          ...commonProps,
+          mxRecords: [
+            {
+              exchange: record.exchange,
+              preference: record.preference,
+            },
+          ],
+        });
+      case input.RecordType.NS:
+        return new nw.RecordSet(`${record.type}-${record.nsdname}`, {
+          ...commonProps,
+          nsRecords: [
+            {
+              nsdname: record.nsdname,
+            },
+          ],
+        });
+      case input.RecordType.PTR:
+        return new nw.RecordSet(`${record.type}-${record.ptrdname}`, {
+          ...commonProps,
+          ptrRecords: [
+            {
+              ptrdname: record.ptrdname,
+            },
+          ],
+        });
+      case input.RecordType.SOA:
+        return new nw.RecordSet(record.type, {
+          ...commonProps,
+          soaRecord: {
+            ...record,
+          },
+        });
+      case input.RecordType.SRV:
+        return new nw.RecordSet(`${record.type}-${record.target}`, {
+          ...commonProps,
+          srvRecords: [
+            {
+              ...record,
+            },
+          ],
+        });
+      case input.RecordType.TXT:
+        return new nw.RecordSet(`${record.type}-${record.value}`, {
+          ...commonProps,
+          txtRecords: [
+            {
+              value: record.value,
+            },
+          ],
+        });
+    }
+  });
+
+  const roleDefinitionId = (
+    await authorization.getRoleDefinition({
+      // From https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+      roleDefinitionId: "befefa01-2a29-4197-83a8-272ff33ce314", // "DNS Zone Contributor",
+      scope: `/subscriptions/${
+        (
+          await authorization.getClientConfig()
+        ).subscriptionId
+      }`,
+    })
+  ).id;
+  await Promise.all(
+    dnsZoneContributorSPNames.map(
+      async (spName) =>
+        new authorization.RoleAssignment(`dns-zone-contributor-${spName}`, {
+          scope: zone.id,
+          principalId: (
+            await ad.getServicePrincipal({
+              displayName: spName,
+            })
+          ).id,
+          roleDefinitionId,
+        }),
+    ),
+  );
+
+  return zone.nameServers;
+};
+
+export default pulumiProgram;
