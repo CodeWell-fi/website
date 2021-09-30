@@ -65,7 +65,8 @@ jobs:
               --entrypoint npm \
               --workdir "$(pwd)" \
               "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
-              run pulumi-azure-pipeline "$@"
+              run pulumi-azure-pipeline -- \
+              "$@"
           }
 
           pulumi refresh
