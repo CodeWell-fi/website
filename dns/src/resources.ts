@@ -5,15 +5,13 @@ import * as ad from "@pulumi/azuread";
 import * as input from "./input";
 
 const pulumiProgram = async ({
-  organization,
-  location,
   dnsZoneName,
   additionalRecords,
   dnsZoneContributorSPNames,
+  ...config
 }: input.Configuration) => {
-  const rg = new resources.ResourceGroup("rg", {
-    resourceGroupName: `${organization}-dns`,
-    location,
+  const rg = await resources.getResourceGroup({
+    resourceGroupName: config.resourceGroupName,
   });
   const zone = new nw.Zone("dns", {
     resourceGroupName: rg.name,
@@ -146,6 +144,8 @@ const pulumiProgram = async ({
         }),
     ),
   );
+
+  return zone.nameServers;
 };
 
 export default pulumiProgram;

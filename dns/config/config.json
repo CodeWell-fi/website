@@ -1,11 +1,10 @@
 {
-  "organization": "codewell",
-  "location": "westeurope",
+  "resourceGroupName": "codewell-dns-managed-site",
   "dnsZoneName": "codewell.fi",
   "additionalRecords": [
     {
       "type": "MX",
-      "relativeName": "",
+      "relativeName": "@",
       "ttl": 3600,
       "exchange": "mail09.domainhotelli.fi",
       "preference": 0

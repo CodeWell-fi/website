@@ -23,7 +23,7 @@ const createRecordType = <P extends t.Props, TRecordType extends RecordType>(
   t.type(
     {
       type: t.literal(recordType),
-      relativeName: t.string,
+      relativeName: validation.nonEmptyString,
       ttl: t.Integer,
       ...props,
     },
@@ -31,8 +31,7 @@ const createRecordType = <P extends t.Props, TRecordType extends RecordType>(
   );
 export const configuration = t.type(
   {
-    organization: validation.nonEmptyString,
-    location: validation.nonEmptyString,
+    resourceGroupName: validation.nonEmptyString,
     dnsZoneName: validation.nonEmptyString,
     additionalRecords: t.array(
       t.union(
