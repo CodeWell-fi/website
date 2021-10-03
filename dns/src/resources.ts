@@ -17,6 +17,7 @@ const pulumiProgram = async ({
     resourceGroupName: rg.name,
     zoneName: dnsZoneName,
     zoneType: "Public",
+    location: "global",
   });
   additionalRecords.map((record) => {
     const commonProps = {
