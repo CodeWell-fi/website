@@ -27,11 +27,11 @@ jobs:
         run: |
           set -e
 
-          # CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
-          # if [[ "${CURRENT_BRANCH}" != "main" ]]; then
-          #   echo 'This action can only be run on main branch!' 1>&2
-          #   exit 1
-          # fi
+          CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "${CURRENT_BRANCH}" != "main" ]]; then
+            echo 'This action can only be run on main branch!' 1>&2
+            exit 1
+          fi
 
           cd initial
           npm ci --ignore-scripts
@@ -91,6 +91,7 @@ jobs:
   #       run: |
   #         set -e
 
+  #         cd post-action
   #         npm ci --ignore-scripts
   #         export AZURE_PIPELINE_CONFIG="$()"
   #         npm run cli
