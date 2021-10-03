@@ -1,6 +1,7 @@
 import * as resources from "@pulumi/azure-native/resources";
 import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
+import * as nw from "@pulumi/azure-native/network";
 import { URL } from "url";
 import * as input from "./input";
 import * as https from "./cdn-https";
@@ -127,14 +128,46 @@ const pulumiProgram = async ({
       ],
     },
   });
-  return domainNames.map((domainName) => {
-    const domainID = `${resourceID}-${domainName}`;
+  const defaultZone = Array.isArray(domainNames)
+    ? undefined
+    : domainNames.defaultZone;
+
+  const domainNameArray = Array.isArray(domainNames)
+    ? domainNames
+    : domainNames.domains;
+
+  return domainNameArray.map((domainName) => {
+    let hostName: string;
+    if (typeof domainName === "string" && !defaultZone) {
+      hostName = domainName;
+    } else {
+      const relativeName =
+        typeof domainName === "string" ? domainName : domainName.relativeName;
+      const zone =
+        typeof domainName === "string"
+          ? defaultZone ?? doThrow<input.ZoneInfo>("This should never happen")
+          : domainName.zone;
+      hostName = `${relativeName === "@" ? "" : `${relativeName}.`}${
+        zone.zoneName
+      }`;
+      new nw.RecordSet(hostName, {
+        ...zone,
+        recordType: "CNAME",
+        relativeRecordSetName: relativeName,
+        ttl: 3600, // TODO make this customizable
+        cnameRecord: {
+          cname: endpoint.hostName,
+        },
+      });
+    }
+
+    const domainID = `${resourceID}-${hostName}`;
     const domain = new cdn.CustomDomain(domainID, {
       resourceGroupName,
       profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
       endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
       customDomainName: "website",
-      hostName: domainName,
+      hostName,
     });
 
     new https.CDNCustomDomainHTTPSResource(
@@ -148,10 +181,14 @@ const pulumiProgram = async ({
       },
     );
     return {
-      domainName,
+      hostName,
       httpsState: domain.customHttpsProvisioningState,
     };
   });
 };
 
 export default pulumiProgram;
+
+const doThrow = <T>(message: string): T => {
+  throw new Error(message);
+};
