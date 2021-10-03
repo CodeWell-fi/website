@@ -142,6 +142,7 @@ const pulumiProgram = async ({
             })
           ).id,
           roleDefinitionId,
+          principalType: "ServicePrincipal",
         }),
     ),
   );
