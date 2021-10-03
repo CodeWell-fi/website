@@ -21,14 +21,6 @@ env:
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
   ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
   ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
-  WEBSITE_INFRA_CONFIG: | # Schema of this is in infrastructure/src/input.ts file
-    {
-      "resourceGroupName": "codewell-dev-managed-site",
-      "organization": "codewell",
-      "environment": "dev",
-      "domainNames": [ "dev.codewell.fi" ],
-      "httpsEnabled": true
-    }
 
 jobs:
   run_infrastructure_pipeline_pulumi_preview:
@@ -49,7 +41,7 @@ jobs:
           set -e
 
           echo 'Reacting to Github event ${{ github.event_name }}.'
-          npm ci
+          npm ci --ignore-scripts
           npm run build
 
           # If we don't set NODE_PATH, we will get errors like
@@ -61,6 +53,7 @@ jobs:
           # fatal: error An assertion has failed: could not get workspace path. source error: getting current user: luser: unable to get current user
 
           PULUMI_OUT_DIR="$(mktemp -d)"
+          export WEBSITE_INFRA_CONFIG="$(cat "config/config-${INFRA_ENV}.json")"
           function pulumi()
           {
             docker run \
@@ -119,10 +112,11 @@ jobs:
         run: |
           set -e
 
-          npm ci
+          npm ci --ignore-scripts
           npm run build
 
           # Disable creation of output file by setting it to empty string
+          export WEBSITE_INFRA_CONFIG="$(cat "config/config-${INFRA_ENV}.json")"
           echo '{"pulumiCommandOutputFile":""}' | docker run \
             --rm \
             --interactive \
