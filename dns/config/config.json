@@ -11,6 +11,12 @@
     },
     {
       "type": "CNAME",
+      "relativeName": "mail",
+      "ttl": 3600,
+      "cname": "hotelli09.domainhotelli.fi"
+    },
+    {
+      "type": "CNAME",
       "relativeName": "www",
       "ttl": 3600,
       "cname": "codewell.fi"
