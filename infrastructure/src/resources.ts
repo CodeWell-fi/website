@@ -153,8 +153,10 @@ const pulumiProgram = async ({
       new nw.RecordSet(hostName, {
         ...zone,
         recordType: "CNAME",
+        relativeRecordSetName: relativeName,
+        ttl: 3600, // TODO make this customizable
         cnameRecord: {
-          cname: relativeName,
+          cname: endpoint.hostName,
         },
       });
     }
