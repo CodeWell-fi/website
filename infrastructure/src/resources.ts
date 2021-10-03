@@ -2,6 +2,7 @@ import * as resources from "@pulumi/azure-native/resources";
 import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
 import * as nw from "@pulumi/azure-native/network";
+import * as pulumi from "@pulumi/pulumi";
 import { URL } from "url";
 import * as input from "./input";
 import * as https from "./cdn-https";
@@ -138,6 +139,7 @@ const pulumiProgram = async ({
 
   return domainNameArray.map((domainName) => {
     let hostName: string;
+    let domainDependsOn: pulumi.Resource | undefined;
     if (typeof domainName === "string" && !defaultZone) {
       hostName = domainName;
     } else {
@@ -150,7 +152,7 @@ const pulumiProgram = async ({
       hostName = `${relativeName === "@" ? "" : `${relativeName}.`}${
         zone.zoneName
       }`;
-      new nw.RecordSet(hostName, {
+      domainDependsOn = new nw.RecordSet(hostName, {
         ...zone,
         recordType: "CNAME",
         relativeRecordSetName: relativeName,
@@ -162,13 +164,19 @@ const pulumiProgram = async ({
     }
 
     const domainID = `${resourceID}-${hostName}`;
-    const domain = new cdn.CustomDomain(domainID, {
-      resourceGroupName,
-      profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
-      endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
-      customDomainName: "website",
-      hostName,
-    });
+    const domain = new cdn.CustomDomain(
+      domainID,
+      {
+        resourceGroupName,
+        profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
+        endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
+        customDomainName: "website",
+        hostName,
+      },
+      {
+        dependsOn: domainDependsOn,
+      },
+    );
 
     new https.CDNCustomDomainHTTPSResource(
       domainID,
