@@ -39,6 +39,6 @@ jobs:
           set -e
 
           npm ci --ignore-scripts
-          cp ../infrastructure/src/naming.ts src
+          cp ../../infrastructure/website/src/naming.ts src
           export WEBSITE_INFRA_CONFIG="$(cat "config/config-${WEBSITE_ENV}.json")"
           npm run deploy
