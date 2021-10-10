@@ -33,7 +33,6 @@ jobs:
             exit 1
           fi
 
-          cd initial
           npm ci --ignore-scripts
           docker run \
             --rm \
@@ -62,7 +61,6 @@ jobs:
         run: |
           set -e
 
-          cd initial
           npm ci --ignore-scripts
           docker run \
             --rm \
