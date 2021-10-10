@@ -4,17 +4,17 @@ on:
     branches:
     - main
     paths:
-    - 'dns/**'
+    - 'infrastructure/dns/**'
   pull_request:
     branches:
     - main
     paths:
-    - 'dns/**'
+    - 'infrastructure/dns/**'
 
 defaults:
   run:
     shell: bash
-    working-directory: dns
+    working-directory: infrastructure/dns
 
 env:
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DNS }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline

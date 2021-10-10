@@ -73,7 +73,7 @@ const dynamicProviderInputs = t.type(
 
 type DynamicProviderInputs = t.TypeOf<typeof dynamicProviderInputs>;
 
-type DynamicProviderOutputs = Omit<DynamicProviderInputs, "token"> & {
+type DynamicProviderOutputs = DynamicProviderInputs & {
   name: string;
 };
 
@@ -318,7 +318,6 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
   ) {
     opts = pulumi.mergeOptions(opts, {
       version: azureUtils.getVersion(),
-      additionalSecretOutputs: ["azureConfig"],
     });
     super(
       new CDNCustomDomainResourceProvider(name),

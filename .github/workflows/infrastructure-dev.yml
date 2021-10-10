@@ -1,20 +1,20 @@
-name: Infrastructure Pipeline - DEV
+name: Infrastructure Website Pipeline - DEV
 on:
   push:
     branches:
     - main
     paths:
-    - 'infrastructure/**'
+    - 'infrastructure/website/**'
   pull_request:
     branches:
     - main
     paths:
-    - 'infrastructure/**'
+    - 'infrastructure/website/**'
 
 defaults:
   run:
     shell: bash
-    working-directory: infrastructure
+    working-directory: infrastructure/website
 
 env:
   INFRA_ENV: dev

@@ -1,0 +1,48 @@
+{
+  "bootstrapperApp": {
+    "type": "sp",
+    "displayName": "bootstrapper",
+    "authentication": {
+      "certSubject": "/O=CodeWell"
+    },
+    "envSpecificPulumiPipelineSPAuth": {
+      "subject": {
+        "country": "FI",
+        "organization": "CodeWell"
+      }
+    }
+  },
+  "azure": {
+    "tenantId": "<redacted>",
+    "subscriptionId": "<redacted>"
+  },
+  "organization": {
+    "name": "codewell",
+    "location": "westeurope",
+    "environments": [
+      "dev",
+      "prod",
+      {
+        "name": "dns",
+        "envSpecificSPAuthOverride": {
+          "applicationRequiredResourceAccess": [
+            {
+              "resourceAppId": "00000003-0000-0000-c000-000000000000",
+              "resourceAccess": [
+                {
+                  "id": "9a5d68dd-52b0-4cc2-bd40-abcf44ac3a30",
+                  "type": "Role"
+                }
+              ]
+            }
+          ]
+        },
+        "providerRegistrations": [ "Microsoft.Network" ]
+      }
+    ]
+  },
+  "targetResources": {
+    "cicdRGSuffix": "site",
+    "targetRGSuffix": ""
+  }
+}
