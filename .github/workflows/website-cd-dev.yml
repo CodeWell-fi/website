@@ -8,17 +8,12 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: website-cd
+    working-directory: frontend/publish
 env:
+  WEBSITE_ENV: dev
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
   ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
   ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
-  WEBSITE_INFRA_CONFIG: | # Schema of this is in website/src/config.ts file
-    {
-      "organization": "codewell",
-      "environment": "dev",
-      "resourceGroupName": "codewell-dev-managed-site"
-    }
 
 jobs:
   perform-cd:
@@ -43,6 +38,7 @@ jobs:
         run: |
           set -e
 
-          npm ci
+          npm ci --ignore-scripts
           cp ../infrastructure/src/naming.ts src
+          export WEBSITE_INFRA_CONFIG="$(cat "config/config-${WEBSITE_ENV}.json")"
           npm run deploy

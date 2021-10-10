@@ -4,7 +4,7 @@ on: workflow_dispatch
 defaults:
   run:
     shell: bash
-    working-directory: bootstrap
+    working-directory: infrastructure/bootstrap
 
 env:
   BOOTSTRAP_PIPELINE_CONFIG: ${{ secrets.BOOTSTRAP_PIPELINE_CONFIG }}
@@ -42,7 +42,7 @@ jobs:
             --entrypoint npm \
             --volume "$(pwd)/:$(pwd)/:ro" \
             --workdir "$(pwd)" \
-            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
+            "pulumi/pulumi-nodejs:$(cat package-lock.json | jq -Mrc '.dependencies["@pulumi/pulumi"]["version"]')-debian" \
             run pulumi-azure-pipeline-bootstrap -- \
             'env:BOOTSTRAP_PIPELINE_CONFIG'
 
@@ -71,27 +71,6 @@ jobs:
             --entrypoint npm \
             --volume "$(pwd)/:$(pwd)/:ro" \
             --workdir "$(pwd)" \
-            "pulumi/pulumi-nodejs:$(cat package.json | jq -Mrc '.dependencies["@pulumi/pulumi"]')-debian" \
+            "pulumi/pulumi-nodejs:$(cat package-lock.json | jq -Mrc '.dependencies["@pulumi/pulumi"]["version"]')-debian" \
             run pulumi-azure-pipeline-bootstrap -- \
             'env:BOOTSTRAP_PIPELINE_CONFIG' true
-
-  # run_after_bootstrap_pipeline_pulumi_up:
-  #   name: Preview After-Bootstrap Pulumi-managed changes
-  #   needs: [ run_bootstrap_pipeline_pulumi_up ]
-  #   environment: cloud-deploy-bootstrap
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         fetch-depth: 1
-  #     - uses: actions/setup-node@v2
-  #       with:
-  #         node-version: 16
-  #     - name: Perform Pulumi-managed changes
-  #       run: |
-  #         set -e
-
-  #         cd post-action
-  #         npm ci --ignore-scripts
-  #         export AZURE_PIPELINE_CONFIG="$()"
-  #         npm run cli
