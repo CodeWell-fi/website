@@ -32,7 +32,7 @@ jobs:
           workflow: website-ci.yml
           run_id: ${{ github.event.workflow_run.id }}
           name: site-contents
-          path: website/build
+          path: frontend/code/build
       - id: preview
         name: Deploy website
         run: |

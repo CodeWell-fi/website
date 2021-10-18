@@ -4,6 +4,7 @@ import * as packageJson from "../../package.json";
 
 test("renders footer", () => {
   render(<Footer label="Footer" githubLink="" />);
+
   performTestForElement("Source code", "a");
   performTestForElement(packageJson.version, "abbr");
   performTestForElement("🍵", "span");

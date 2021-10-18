@@ -72,7 +72,7 @@ const main = async () => {
             organization,
             environment,
           )}.blob.core.windows.net/$web`,
-          webpageDir: path.normalize(`${process.cwd()}/../website/build`),
+          webpageDir: path.normalize(`${process.cwd()}/../code/build`),
         },
         cdnEndpoint: {
           subscriptionId: azure.subscriptionId,
