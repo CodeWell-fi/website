@@ -55,8 +55,8 @@
     "eslint": "7.32.0"
   },
   "scripts": {
-    "start": "ts-node --project tsconfig.scripts.json scripts/start.ts && react-scripts start",
-    "build": "ts-node --project tsconfig.scripts.json scripts/start.ts && react-scripts build",
+    "start": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && react-scripts start",
+    "build": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && react-scripts build",
     "test": "jest --detectOpenHandles --forceExit --watchAll=false",
     "test:coverage": "jest --detectOpenHandles --forceExit --watchAll=false --coverage",
     "test:watch": "jest --watch --detectOpenHandles --forceExit",
