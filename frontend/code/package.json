@@ -57,8 +57,8 @@
   "scripts": {
     "start": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && react-scripts start",
     "build": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && react-scripts build",
-    "test": "jest --detectOpenHandles --forceExit --watchAll=false",
-    "test:coverage": "jest --detectOpenHandles --forceExit --watchAll=false --coverage",
+    "test": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && jest --detectOpenHandles --forceExit --watchAll=false",
+    "test:coverage": "ts-node --project tsconfig.scripts.json scripts/prepare-env.ts && jest --detectOpenHandles --forceExit --watchAll=false --coverage",
     "test:watch": "jest --watch --detectOpenHandles --forceExit",
     "eject": "react-scripts eject"
   },

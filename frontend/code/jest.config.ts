@@ -27,5 +27,6 @@ export default async (): Promise<Config.InitialOptions> => {
       'cobertura',
       'text',
     ],
+    setupFiles: ['dotenv/config']
   };
 };
