@@ -11,6 +11,17 @@ const Footer = ({ label, githubLink }: FooterProps) => {
     display: "inline-block",
     position: "relative",
   };
+  const shaString = `SHA: ${
+    process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
+  }`;
+  // Show title only when viewing on browsers which have hover ability on their primary device
+  const abbrTitle = matchMedia("(hover: hover)").matches
+    ? shaString
+    : undefined;
+  let abbrContents = process.env.REACT_APP_VERSION_STRING ?? "0.0.0";
+  if (!abbrTitle) {
+    abbrContents = `${abbrContents} (${shaString})`;
+  }
   return (
     <Container
       sx={{
@@ -35,26 +46,19 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           backgroundColor: theme.palette.primary.dark, // theme.palette.background.default,
         }}
       >
-        <Box>
+        <Box typography="subtitle2">
           <Link
             href={githubLink}
             target="_blank"
             rel="noopener noreferrer"
-            typography="subtitle2"
             color={theme.palette.primary.light}
             sx={displayOnSameRow}
           >
             Source code
           </Link>
           <Typography sx={displayOnSameRow}>&nbsp;for version&nbsp;</Typography>
-          <Typography
-            component="abbr"
-            title={`SHA: ${
-              process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
-            }`}
-            sx={displayOnSameRow}
-          >
-            {process.env.REACT_APP_VERSION_STRING ?? "0.0.0"}
+          <Typography component="abbr" title={abbrTitle} sx={displayOnSameRow}>
+            {abbrContents}
           </Typography>
           <Typography sx={displayOnSameRow}>
             : made with Azure, Pulumi, React, and lots of&nbsp;
