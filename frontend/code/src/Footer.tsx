@@ -9,8 +9,12 @@ const Footer = ({ label, githubLink }: FooterProps) => {
   const theme = useTheme();
   const displayOnSameRow: SxProps<typeof theme> = {
     display: "inline-block",
-    position: "relative",
   };
+  const typography = "caption";
+  const typographyProps = {
+    sx: displayOnSameRow,
+    variant: typography,
+  } as const;
   const shaString = `SHA: ${
     process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
   }`;
@@ -37,37 +41,60 @@ const Footer = ({ label, githubLink }: FooterProps) => {
         component="footer"
         sx={{
           position: "fixed",
-          display: "flex",
+          // display: "flex",
+          //justifyContent: "center",
           bottom: 0,
           width: "100vw",
-          justifyContent: "center",
-          paddingBottom: "1rem",
-          paddingTop: "1rem",
+          // paddingBottom: "0.3rem",
+          paddingTop: "0.3rem",
           backgroundColor: theme.palette.primary.dark, // theme.palette.background.default,
         }}
       >
-        <Box typography="subtitle2">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Typography {...typographyProps}>Site version&nbsp;</Typography>
+          {/* <Typography
+            component="abbr"
+            title={`SHA: ${
+              process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
+            }`}
+            {...typographyProps}
+          >
+            {process.env.REACT_APP_VERSION_STRING ?? "0.0.0"}
+          </Typography> */}
+          <Typography component="abbr" title={abbrTitle} {...typographyProps}>
+            {abbrContents}
+          </Typography>
+          <Typography {...typographyProps}>&nbsp;-&nbsp;</Typography>
           <Link
             href={githubLink}
             target="_blank"
             rel="noopener noreferrer"
             color={theme.palette.primary.light}
             sx={displayOnSameRow}
+            typography={typography}
           >
             Source code
           </Link>
-          <Typography sx={displayOnSameRow}>&nbsp;for version&nbsp;</Typography>
-          <Typography component="abbr" title={abbrTitle} sx={displayOnSameRow}>
-            {abbrContents}
-          </Typography>
-          <Typography sx={displayOnSameRow}>
-            : made with Azure, Pulumi, React, and lots of&nbsp;
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <Typography {...typographyProps}>
+            Made with Azure, Pulumi, React, and lots of&nbsp;
           </Typography>
           <Typography // eslint-disable-line jsx-a11y/accessible-emoji
             component="span"
-            sx={displayOnSameRow}
             role="img"
             aria-label="tea"
+            {...typographyProps}
           >
             🍵
           </Typography>
