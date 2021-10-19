@@ -15,17 +15,17 @@ const Footer = ({ label, githubLink }: FooterProps) => {
     sx: displayOnSameRow,
     variant: typography,
   } as const;
-  const shaString = `SHA: ${
-    process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
-  }`;
-  // Show title only when viewing on browsers which have hover ability on their primary device
-  const abbrTitle = matchMedia("(hover: hover)").matches
-    ? shaString
-    : undefined;
-  let abbrContents = process.env.REACT_APP_VERSION_STRING ?? "0.0.0";
-  if (!abbrTitle) {
-    abbrContents = `${abbrContents} (${shaString})`;
-  }
+  // const shaString = `SHA: ${
+  //   process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
+  // }`;
+  // // Show title only when viewing on browsers which have hover ability on their primary device
+  // const abbrTitle = matchMedia("(hover: hover)").matches
+  //   ? shaString
+  //   : undefined;
+  // let abbrContents = process.env.REACT_APP_VERSION_STRING ?? "0.0.0";
+  // if (!abbrTitle) {
+  //   abbrContents = `${abbrContents} (${shaString})`;
+  // }
   return (
     <Container
       sx={{
@@ -57,7 +57,7 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           }}
         >
           <Typography {...typographyProps}>Site version&nbsp;</Typography>
-          {/* <Typography
+          <Typography
             component="abbr"
             title={`SHA: ${
               process.env.REACT_APP_GIT_SHA ?? "Not managed by GIT"
@@ -65,10 +65,10 @@ const Footer = ({ label, githubLink }: FooterProps) => {
             {...typographyProps}
           >
             {process.env.REACT_APP_VERSION_STRING ?? "0.0.0"}
-          </Typography> */}
-          <Typography component="abbr" title={abbrTitle} {...typographyProps}>
-            {abbrContents}
           </Typography>
+          {/* <Typography component="abbr" title={abbrTitle} {...typographyProps}>
+            {abbrContents}
+          </Typography> */}
           <Typography {...typographyProps}>&nbsp;-&nbsp;</Typography>
           <Link
             href={githubLink}
