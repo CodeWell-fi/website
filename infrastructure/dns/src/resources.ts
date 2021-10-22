@@ -27,9 +27,10 @@ const pulumiProgram = async ({
       recordType: record.type,
       ttl: record.ttl,
     };
+    const recordSetID = `${record.type}-${record.relativeName}`;
     switch (record.type) {
       case input.RecordType.A:
-        return new nw.RecordSet(`${record.type}-${record.address}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           aRecords: [
             {
@@ -38,7 +39,7 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.AAAA:
-        return new nw.RecordSet(`${record.type}-${record.address}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           aaaaRecords: [
             {
@@ -47,7 +48,7 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.CAA:
-        return new nw.RecordSet(`${record.type}-${record.value}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           caaRecords: [
             {
@@ -58,14 +59,14 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.CNAME:
-        return new nw.RecordSet(`${record.type}-${record.cname}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           cnameRecord: {
             cname: record.cname,
           },
         });
       case input.RecordType.MX:
-        return new nw.RecordSet(`${record.type}-${record.exchange}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           mxRecords: [
             {
@@ -75,7 +76,7 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.NS:
-        return new nw.RecordSet(`${record.type}-${record.nsdname}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           nsRecords: [
             {
@@ -84,7 +85,7 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.PTR:
-        return new nw.RecordSet(`${record.type}-${record.ptrdname}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           ptrRecords: [
             {
@@ -100,7 +101,7 @@ const pulumiProgram = async ({
           },
         });
       case input.RecordType.SRV:
-        return new nw.RecordSet(`${record.type}-${record.target}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           srvRecords: [
             {
@@ -109,7 +110,7 @@ const pulumiProgram = async ({
           ],
         });
       case input.RecordType.TXT:
-        return new nw.RecordSet(`${record.type}-${record.value}`, {
+        return new nw.RecordSet(recordSetID, {
           ...commonProps,
           txtRecords: [
             {
