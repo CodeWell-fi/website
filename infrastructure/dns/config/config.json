@@ -6,7 +6,14 @@
       "type": "MX",
       "relativeName": "@",
       "ttl": 3600,
-      "exchange": "mail09.domainhotelli.fi",
+      "exchange": "31.217.196.226",
+      "preference": 0
+    },
+    {
+      "type": "MX",
+      "relativeName": "*.mail",
+      "ttl": 3600,
+      "exchange": "31.217.196.226",
       "preference": 0
     },
     {
@@ -14,6 +21,23 @@
       "relativeName": "mail",
       "ttl": 3600,
       "cname": "hotelli09.domainhotelli.fi"
+    },
+    {
+      "type": "TXT",
+      "relativeName": "default._domainkey",
+      "ttl": 3600,
+      "value": [
+        "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoVs3AgYe9wb2D5l5VE2u4Wz21lbNmLncStE/3b7TLD1WI4cC+UJ5+8D0QlwV8/DlkJPfImpaZv4F+5vBSsfo9EhuIRWABZUKhKgLzbd/BGzxH9zivpoVEOVGOwCqnRf8effDcCpE5dStkG41DDsWvySKEwHspCL0SQdLX4mGjLq9G/I5CGkmFYc661WivVoKn",
+        "kiqzvWvwAN/7Xdz23AbyIMeov7puNwLwEWhlrfGAyXQ6Y7DMq+43OsF8jTZrLIIg9sDUWlA/eAaj3yyAUmH+/v9WFii4+yizUypimBgdH7oVXL561+bJV8bWPUK9bBvhH3cZfBK74sgbZ93V8GIxQIDAQAB;"
+      ]
+    },
+    {
+      "type": "TXT",
+      "relativeName": "@",
+      "ttl": 3600,
+      "value": [
+        "v=spf1 +mx +a +ip4:31.217.196.226 ~all"
+      ]
     },
     {
       "type": "CNAME",
