@@ -23,16 +23,11 @@ const Content = ({ tabGroupUniqueName, sections: tabs, header }: MainProps) => {
   const getID = (idx: number) => `tab-${tabGroupUniqueName}-${idx}`;
   const theme = useTheme();
   const [contentHeigth, setContentHeigth] = useState<number>(0);
-  const navRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const adjustSize = () => {
     const { current: contentElement } = contentRef;
-    const { current: navElement } = navRef;
-    if (contentElement && navElement) {
-      setContentHeigth(
-        contentElement.getBoundingClientRect().bottom -
-          navElement.getBoundingClientRect().bottom,
-      );
+    if (contentElement) {
+      setContentHeigth(contentElement.getBoundingClientRect().height);
     }
   };
   useLayoutEffect(adjustSize, []); // Run this only once as we don't have any dynamic elements in UI
@@ -98,7 +93,6 @@ const Content = ({ tabGroupUniqueName, sections: tabs, header }: MainProps) => {
           backgroundColor: theme.palette.primary.light,
         }}
         component="nav"
-        ref={navRef}
       >
         <NavBar
           items={tabs.map(({ label }, idx) => ({
