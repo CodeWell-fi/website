@@ -96,7 +96,6 @@ const Content = ({ tabGroupUniqueName, sections: tabs, header }: MainProps) => {
           right: 0,
           width: "100%",
           backgroundColor: theme.palette.primary.light,
-          zIndex: 1, // This is to avoid tab contents to go over navbar when scrolling
         }}
         component="nav"
         ref={navRef}
