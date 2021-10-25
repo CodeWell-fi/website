@@ -4,7 +4,11 @@ import { DebouncedFunc } from "lodash";
 
 export type Callback = () => void;
 
-const useThrottledOnScroll = (callback: Callback | null, delay: number) => {
+export const useThrottledWindowListener = <K extends keyof WindowEventMap>(
+  event: K,
+  callback: Callback | null,
+  delay: number,
+) => {
   const throttledCallback = useMemo(
     () => (callback ? throttle(callback, delay) : noop),
     [callback, delay],
@@ -15,14 +19,12 @@ const useThrottledOnScroll = (callback: Callback | null, delay: number) => {
       return undefined;
     }
 
-    window.addEventListener("scroll", throttledCallback);
+    window.addEventListener(event, throttledCallback);
     return () => {
-      window.removeEventListener("scroll", throttledCallback);
+      window.removeEventListener(event, throttledCallback);
       (throttledCallback as DebouncedFunc<Callback>).cancel();
     };
-  }, [throttledCallback]);
+  }, [event, throttledCallback]);
 };
 
 const noop = () => {};
-
-export default useThrottledOnScroll;

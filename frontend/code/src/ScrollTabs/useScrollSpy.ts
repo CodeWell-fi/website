@@ -5,7 +5,7 @@ import {
   useCallback,
   MutableRefObject,
 } from "react";
-import useThrottledOnScroll from "./useThrottledOnScroll";
+import * as common from "../common";
 
 export interface ScrollSpyItem {
   hash: string;
@@ -37,10 +37,14 @@ const useScrollSpy = (
         setActiveState(active.hash);
       }
     }
-  }, [activeState]);
+  }, [activeState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Corresponds to 10 frames at 60 Hz
-  useThrottledOnScroll(items.length > 0 ? findActiveIndex : null, 166);
+  common.useThrottledWindowListener(
+    "scroll",
+    items.length > 0 ? findActiveIndex : null,
+    166,
+  );
 
   return [activeState, setActiveState] as const;
 };
@@ -66,7 +70,7 @@ const tryFindActive = (elements: ReadonlyArray<ScrollSpyItemElement>) => {
         item.node &&
         item.node.offsetTop <
           document.documentElement.scrollTop +
-            document.documentElement.clientHeight / 8
+            document.documentElement.clientHeight / 5
       ) {
         active = item;
         break;

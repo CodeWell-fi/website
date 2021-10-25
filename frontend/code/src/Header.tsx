@@ -70,7 +70,7 @@ const Header = ({
         setOverlapBoxSx(null);
       }
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -81,7 +81,7 @@ const Header = ({
             position: "relative",
             opacity: 0,
             animation: `${getKeyframes("down")} 1s forwards`,
-            animationDelay: "0.5s",
+            animationDelay: "0.2s",
             transform: "translateY(-200%)",
           }}
           variant={variant}
@@ -95,7 +95,7 @@ const Header = ({
             position: "relative",
             opacity: 0,
             animation: `${getKeyframes("left")} 1s forwards`,
-            animationDelay: "1.5s",
+            animationDelay: "1.2s",
             transform: "translateX(100%)",
           }}
           variant={variant}
