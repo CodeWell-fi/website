@@ -26,3 +26,5 @@ yarn-error.log*
 .Dockerfile.dev
 # Emitted by scripts/prepare-env.ts
 public/contact_mail.txt
+# Working folder for logos etc
+workbench*

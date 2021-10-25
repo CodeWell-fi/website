@@ -12,13 +12,14 @@ import * as common from "./common";
 
 interface MainProps {
   tabGroupUniqueName: string;
-  tabs: ReadonlyArray<{
+  sections: ReadonlyArray<{
     label: ReactNode;
     component: ReactElement; // ElementType
   }>;
+  header: ReactElement;
 }
 
-const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
+const Content = ({ tabGroupUniqueName, sections: tabs, header }: MainProps) => {
   const getID = (idx: number) => `tab-${tabGroupUniqueName}-${idx}`;
   const theme = useTheme();
   const [contentHeigth, setContentHeigth] = useState<number>(0);
@@ -36,40 +37,14 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
   };
   useLayoutEffect(adjustSize, []); // Run this only once as we don't have any dynamic elements in UI
   common.useThrottledWindowListener("resize", adjustSize, 500);
-  const zIndexMinus1: SxProps<typeof theme> = {
-    zIndex: -1,
-  };
-  const topMostSxProps: SxProps<typeof theme> =
-    contentHeigth > 0
-      ? {
-          ...zIndexMinus1,
-          height: `${contentHeigth}px`,
-        }
-      : { ...zIndexMinus1 };
+
+  // Some notes:
+  // 1. The content should be absolutely positioned so that height and centering would work meaningfully
+  // 2. The outermost box must have explicit height. If it doesn't, then the absolutely-positioned content will not be part of auto-calculated height -> the navbar will not float at the top of the page when scrolled.
+  // 3. The content must come *before* anything else, because: "Elements in the same stacking context will display in order of appearance, with latter elements on top of former elements." ( from https://www.freecodecamp.org/news/4-reasons-your-z-index-isnt-working-and-how-to-fix-it-coder-coder-6bc05f103e6c/ ).
+  //    This means that if header is before content, it will never be visible, no matter what CSS is applied.
   return (
-    <Box sx={{ ...topMostSxProps }}>
-      <Container
-        sx={{
-          borderBottom: 1,
-          borderColor: "divider",
-          position: "sticky",
-          top: 0,
-          left: 0,
-          right: 0,
-          width: "100%",
-          backgroundColor: theme.palette.primary.light,
-          zIndex: 1, // This is to avoid tab contents to go over navbar when scrolling
-        }}
-        component="nav"
-        ref={navRef}
-      >
-        <NavBar
-          items={tabs.map(({ label }, idx) => ({
-            hash: getID(idx),
-            label,
-          }))}
-        />
-      </Container>
+    <Box sx={contentHeigth > 0 ? { height: `${contentHeigth}px` } : undefined}>
       <Box
         sx={{
           position: "absolute",
@@ -110,6 +85,29 @@ const Content = ({ tabGroupUniqueName, tabs }: MainProps) => {
           })}
         </Container>
       </Box>
+      {header}
+      <Container
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+          position: "sticky",
+          top: 0,
+          left: 0,
+          right: 0,
+          width: "100%",
+          backgroundColor: theme.palette.primary.light,
+          zIndex: 1, // This is to avoid tab contents to go over navbar when scrolling
+        }}
+        component="nav"
+        ref={navRef}
+      >
+        <NavBar
+          items={tabs.map(({ label }, idx) => ({
+            hash: getID(idx),
+            label,
+          }))}
+        />
+      </Container>
     </Box>
   );
 };

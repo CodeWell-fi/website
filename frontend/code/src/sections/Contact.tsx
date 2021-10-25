@@ -39,7 +39,10 @@ export const Contact = () => {
               }
             }
             if (mailAddress.current) {
-              window.open(`mailto:${mailAddress.current}`);
+              // Don't use window.open, as that will cause occasional flickering
+              location.href = `mailto:${
+                mailAddress.current
+              }?subject=${encodeURIComponent("Contact enquiry from website")}`;
             }
           }}
         >
