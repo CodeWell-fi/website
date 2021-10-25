@@ -24,3 +24,5 @@ yarn-error.log*
 
 .env
 .Dockerfile.dev
+# Emitted by scripts/prepare-env.ts
+public/contact_mail.txt

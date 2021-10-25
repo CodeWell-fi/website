@@ -4,6 +4,7 @@ module.exports = {
     'plugin:import/recommended',
     'plugin:import/typescript',
     'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
     'plugin:sonarjs/recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/eslint-recommended',
@@ -36,6 +37,7 @@ module.exports = {
     "no-useless-return": "error",
     "no-console": "error",
     "react/react-in-jsx-scope": "off", // With React 17, this is no longer needed
+    "react-hooks/exhaustive-deps": "error",
   },
   settings: {
     "import/resolver": {
