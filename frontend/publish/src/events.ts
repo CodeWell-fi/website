@@ -10,7 +10,7 @@ export interface VirtualWebsiteDeployEvents {
   };
   uploadedFilesToWebsiteContainer: {
     containerURL: string;
-    blobs: ReadonlyArray<storage.BlobUploadCommonResponse>;
+    blobs: ReadonlyArray<UploadResult>;
   };
   cdnPurgeStarting: {
     contentPaths: ReadonlyArray<string>;
@@ -20,6 +20,11 @@ export interface VirtualWebsiteDeployEvents {
     progress: msRest.TransferProgressEvent;
   };
   cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"];
+}
+
+export interface UploadResult {
+  blobPath: string;
+  uploadResult: storage.BlobUploadCommonResponse;
 }
 
 export type WebsiteDeployEventEimtter =

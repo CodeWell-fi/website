@@ -4,6 +4,7 @@ import * as id from "@azure/identity";
 import * as storage from "@azure/storage-blob";
 import * as cdn from "@azure/arm-cdn";
 import * as mime from "mime-types";
+import * as common from "@data-heaving/common";
 import * as events from "./events";
 
 export interface Inputs {
@@ -38,37 +39,52 @@ const deploy = async (
   })) {
     blobNames.push(blob.name);
   }
-  if (blobNames.length > 0) {
-    await container.getBlobBatchClient().deleteBlobs(
-      blobNames.map((blobName) => `${container.url}/${blobName}`),
-      credentials,
+
+  // Upload all new files
+  const uploadOneFile = async (filePath: string) => {
+    const blobPath = filePath.substr(webpageDir.length + 1);
+    return {
+      blobPath,
+      uploadResult: await container
+        .getBlockBlobClient(blobPath)
+        .uploadFile(filePath, {
+          blobHTTPHeaders: {
+            blobContentType:
+              mime.lookup(path.extname(filePath)) || "application/octet-stream",
+          },
+        }),
+    };
+  };
+  const promises: Array<Promise<events.UploadResult>> = [];
+  for await (const directoryFiles of getFilesRecursively(webpageDir)) {
+    promises.push(...directoryFiles.map(uploadOneFile));
+  }
+  const blobs = await Promise.all(promises);
+  eventEmitter.emit("uploadedFilesToWebsiteContainer", {
+    containerURL,
+    blobs,
+  });
+
+  const uploadBlobPaths = new Set(blobs.map(({ blobPath }) => blobPath));
+  const blobsToDelete = blobNames.filter(
+    (existingBlobName) => !uploadBlobPaths.has(existingBlobName),
+  );
+
+  if (blobsToDelete.length > 0) {
+    // Note that deleting blobs in batch *does not work* for website container!
+    // Instead, one must use the plain "deleteBlob" to delete them one by one.
+    await common.iterateInParallel(
+      blobsToDelete,
+      10,
+      async (blobName) =>
+        await container.deleteBlob(blobName, {
+          deleteSnapshots: "include",
+        }),
     );
   }
   eventEmitter.emit("deletedFilesFromWebsiteContainer", {
     containerURL,
-    blobNames,
-  });
-
-  // Upload all new files
-  const promises: Array<Promise<storage.BlobUploadCommonResponse>> = [];
-  for await (const directoryFiles of getFilesRecursively(webpageDir)) {
-    promises.push(
-      ...directoryFiles.map((filePath) => {
-        return container
-          .getBlockBlobClient(filePath.substr(webpageDir.length + 1))
-          .uploadFile(filePath, {
-            blobHTTPHeaders: {
-              blobContentType:
-                mime.lookup(path.extname(filePath)) ||
-                "application/octet-stream",
-            },
-          });
-      }),
-    );
-  }
-  eventEmitter.emit("uploadedFilesToWebsiteContainer", {
-    containerURL,
-    blobs: await Promise.all(promises),
+    blobNames: blobsToDelete,
   });
 
   // Purge CDN caches
