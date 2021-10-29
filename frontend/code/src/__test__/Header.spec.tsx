@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import * as common from "./common";
+import * as utils from "../test-utils";
 import Header from "../Header";
 
 test("Renders header correctly", () => {
@@ -14,9 +14,9 @@ test("Renders header correctly", () => {
     />,
   );
 
-  common.performTestForElement(verticalAnimationText, "h1");
-  common.performTestForElement(horizontalAnimationText, "h1");
-  const roleElement = common.performTestForElement(
+  utils.performTestForElement(verticalAnimationText, "h1");
+  utils.performTestForElement(horizontalAnimationText, "h1");
+  const roleElement = utils.performTestForElement(
     screen.getAllByRole("heading")[0],
     "div",
   );

@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import * as common from "./common";
+import * as utils from "../test-utils";
 import Content, { ContentProps } from "../Content";
 
 test("Renders content correctly without sections", () => {
@@ -47,12 +47,12 @@ const performContentTest = (
       sections={sections}
     />,
   );
-  const renderedHeader = common.performTestForElement(headerString, "span");
+  const renderedHeader = utils.performTestForElement(headerString, "span");
   sectionTexts.forEach(({ label, content }) => {
     // Check that label is rendered
-    common.performTestForElement(label, "span");
+    utils.performTestForElement(label, "span");
     // Check that content is rendered
-    common.performTestForElement(content, "p");
+    utils.performTestForElement(content, "p");
   });
   const contentContainer = renderResult.container;
   expect(contentContainer.childElementCount).toBe(1);
@@ -64,12 +64,12 @@ const performContentTest = (
   expect(content.childElementCount).toBe(1);
   expect(content.children[0].childElementCount).toBe(sections.length);
   for (const child of content.children[0].children) {
-    common.performTestForElement(child, "article");
+    utils.performTestForElement(child, "article");
   }
   // 2nd child is the header
   expect(header === renderedHeader).toBe(true);
   // 3rd child is the nav bar container with tabs
-  common.performTestForElement(nav, "nav");
+  utils.performTestForElement(nav, "nav");
   expect(nav.childElementCount).toBe(1);
   expect(nav.children[0].childElementCount).toBe(1);
   expect(nav.children[0].children[0].childElementCount).toBe(2); // Indicator + container for titles
@@ -80,7 +80,7 @@ const performContentTest = (
   for (const [idx, child] of Array.from(
     nav.children[0].children[0].children[0].children,
   ).entries()) {
-    common.performTestForElement(child, "button");
+    utils.performTestForElement(child, "button");
     expect(child.textContent).toBe(sectionTexts[idx].label);
   }
 };

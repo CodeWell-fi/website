@@ -1,12 +1,12 @@
 import { render } from "@testing-library/react";
-import * as common from "./common";
+import * as utils from "../test-utils";
 import Footer from "../Footer";
 import * as packageJson from "../../package.json";
 
 test("Renders footer correctly", () => {
   render(<Footer label="Footer" githubLink="" />);
 
-  common.performTestForElement("Source code", "a");
-  common.performTestForElement(packageJson.version, "abbr");
-  common.performTestForElement("🍵", "span");
+  utils.performTestForElement("Source code", "a");
+  utils.performTestForElement(packageJson.version, "abbr");
+  utils.performTestForElement("🍵", "span");
 });
