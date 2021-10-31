@@ -10,7 +10,7 @@ The website itself is written in [TypeScript](https://www.typescriptlang.org/) u
 The related source code, including website contents as well as deployment DevOps pipeline source code, are in [frontend folder of this repository](frontend).
 
 ## DevOps pipelines
-The GitHub-compatible DevOps pipeline definitions are in [.github/workflows folder](.github/infrastructure).
+The GitHub-compatible DevOps pipeline definitions are in [.github/workflows folder](.github/workflows).
 These definitions are small wrappers around calling TypeScript code, which performs the actual functionality of the pipeline.
 The code in [infrastructure folder](infrastructure) utilizes [Pulumi](https://www.pulumi.com/) framework to handle Azure infrastructure management.
 The code in [frontend folder](frontend) utilizes normal Node Azure libraries to upload website files to storage account and [purge Azure CDN](https://docs.microsoft.com/en-us/azure/cdn/cdn-purge-endpoint).
