@@ -17,4 +17,4 @@ Then, the pipeline will wait for manual approval, before proceeding to perform t
 Because of this, make sure to read and understand the [source code](https://github.com/DataHeaving/pulumi/tree/main/azure-pipeline-bootstrap) of the pipeline that is being run!
 Make sure that it is indeed correct package that is being downloaded and executed.
 
-The [GitHub Workflow file](../../.github/workflows/bootstrap.yml) defines the [GitHub Workflow](actions/workflows/bootstrap.yml) that uses the code in this folder to execute.
+The [GitHub Workflow file](../../.github/workflows/bootstrap.yml) defines the [GitHub Workflow](/CodeWell-fi/website/actions/workflows/bootstrap.yml) that uses the code in this folder to execute.

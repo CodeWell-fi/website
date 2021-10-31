@@ -8,7 +8,7 @@ The pipeline is executed using [DataHeaving package](https://github.com/DataHeav
 This package will load the code of this pipeline and run it using [Pulumi Automation API], taking care of various necessary setup before that.
 This setup uses credential and Pulumi information via `AZURE_PIPELINE_CONFIG` environment variable, which is stored to key vault secret by [Azure Bootstrap pipeline](../bootstrap).
 This secret was once read manually and stored as [GitHub repository secret](https://docs.github.com/en/actions/security-guides/encrypted-secrets).
-The [GitHub Workflow file](../../.github/workflows/dns.yml) defines the [GitHub Workflow](actions/workflows/dns.yml) that uses the GitHub repository secret and the code in this folder to execute the pipeline.
+The [GitHub Workflow file](../../.github/workflows/dns.yml) defines the [GitHub Workflow](/CodeWell-fi/website/actions/workflows/dns.yml) that uses the GitHub repository secret and the code in this folder to execute the pipeline.
 
 # Pipeline Deployment Details
 The [resources managed by the pipeline](./src/resources.ts) are:
