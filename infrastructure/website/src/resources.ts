@@ -12,7 +12,6 @@ const pulumiProgram = async ({
   organization,
   environment,
   domainNames,
-  httpsEnabled,
   ...config
 }: input.Configuration) => {
   const resourceID = "website";
@@ -182,7 +181,7 @@ const pulumiProgram = async ({
       domainID,
       {
         domainID: domain.id,
-        httpsEnabled,
+        httpsEnabled: true,
       },
       {
         parent: domain,

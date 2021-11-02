@@ -1,6 +1,6 @@
-const reportWebVitals = async (
-  onPerfEntry?: import("web-vitals").ReportHandler,
-) => {
+import type { ReportHandler } from "web-vitals";
+
+const reportWebVitals = async (onPerfEntry?: ReportHandler) => {
   if (onPerfEntry && onPerfEntry instanceof Function) {
     const { getCLS, getFID, getFCP, getLCP, getTTFB } = await import(
       "web-vitals"

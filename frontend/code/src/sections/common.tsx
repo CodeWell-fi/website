@@ -1,6 +1,6 @@
 import { Typography, Box } from "@mui/material";
-
-type Variant = import("@mui/material/styles/createTypography").Variant;
+import type { Variant } from "@mui/material/styles/createTypography";
+import type { SxProps } from "@mui/system";
 
 export type Lines = ReadonlyArray<
   | string
@@ -16,7 +16,7 @@ export type Lines = ReadonlyArray<
 
 export interface RenderLineOptionalProps {
   variant: Variant;
-  sx: import("@mui/system").SxProps;
+  sx: SxProps;
 }
 
 export const DEFAULT_OPTIONAL_PROPS: RenderLineOptionalProps = {

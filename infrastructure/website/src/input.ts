@@ -39,7 +39,6 @@ export const configuration = t.type({
     ],
     "DomainNameJoinConfiguration",
   ),
-  httpsEnabled: t.boolean,
 });
 
 export type Configuration = t.TypeOf<typeof configuration>;
