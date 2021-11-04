@@ -1,5 +1,10 @@
-# Source Code for Code Well Public Website
+# Repository Managing Code Well Public Website
 This repository contains infrastructure and content setup for website hosted by company Code Well.
+
+# Website Architecture
+The picture below gives a high-level overview of how the website is managed.
+
+![Website Architecture](./docs/website-architecture.png "Website Architecture Overview")
 # Repository structure
 ## Infrastructure
 The website is hosted as files in [Azure static website storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-static-website).
