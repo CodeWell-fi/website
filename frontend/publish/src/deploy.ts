@@ -29,7 +29,7 @@ const deploy = async (
     cdnEndpoint,
   }: Inputs,
 ) => {
-  // Delete all the existing files
+  // List all the existing files
   const container = new storage.ContainerClient(containerURL, credentials);
   const blobNames: Array<string> = [];
   for await (const blob of container.listBlobsFlat({
@@ -89,31 +89,25 @@ const deploy = async (
 
   // Purge CDN caches
   const contentPaths = ["/*"];
-  eventEmitter.emit("cdnPurgeStarting", { contentPaths: [...contentPaths] });
-  await new cdn.CdnManagementClient(
-    credentials,
-    cdnEndpoint.subscriptionId,
-  ).endpoints.purgeContent(
-    cdnEndpoint.resourceGroupName,
-    cdnEndpoint.profileName,
-    cdnEndpoint.endpointName,
-    contentPaths,
-    {
-      onDownloadProgress: (progress) =>
-        eventEmitter.emit("cdnPurgeProgress", {
-          kind: "download",
-          progress,
-          contentPaths: [...contentPaths],
-        }),
-      onUploadProgress: (progress) =>
-        eventEmitter.emit("cdnPurgeProgress", {
-          kind: "upload",
-          progress,
-          contentPaths: [...contentPaths],
-        }),
-    },
-  );
-  eventEmitter.emit("cdnPurgeCompleted", { contentPaths: [...contentPaths] });
+  const cdnPurgeEvent = { contentPaths: [...contentPaths] };
+  eventEmitter.emit("cdnPurgeStarting", cdnPurgeEvent);
+  let purgeSuccess = false;
+  await Promise.race([
+    (async () => {
+      await new cdn.CdnManagementClient(
+        credentials,
+        cdnEndpoint.subscriptionId,
+      ).endpoints.purgeContent(
+        cdnEndpoint.resourceGroupName,
+        cdnEndpoint.profileName,
+        cdnEndpoint.endpointName,
+        contentPaths,
+      );
+      purgeSuccess = true;
+    })(),
+    notifyProgress(eventEmitter, cdnPurgeEvent, () => purgeSuccess),
+  ]);
+  eventEmitter.emit("cdnPurgeCompleted", { ...cdnPurgeEvent, purgeSuccess });
 };
 
 // Slightly modified from https://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search
@@ -133,5 +127,17 @@ async function* getFilesRecursively(
     yield* getFilesRecursively(fullPath);
   }
 }
+
+const notifyProgress = async (
+  eventEmitter: events.WebsiteDeployEventEimtter,
+  cdnPurgeEvent: events.VirtualWebsiteDeployEvents["cdnPurgeStarting"],
+  purgeDone: () => boolean,
+) => {
+  const iteration = 0;
+  while (!purgeDone()) {
+    eventEmitter.emit("cdnPurgeProgress", { ...cdnPurgeEvent, iteration });
+    await common.sleep(1000);
+  }
+};
 
 export default deploy;

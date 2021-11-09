@@ -1,6 +1,5 @@
 import * as common from "@data-heaving/common";
 import * as storage from "@azure/storage-blob";
-import * as msRest from "@azure/ms-rest-js";
 
 // This is virtual interface - no instances implementing this are ever created
 export interface VirtualWebsiteDeployEvents {
@@ -16,10 +15,11 @@ export interface VirtualWebsiteDeployEvents {
     contentPaths: ReadonlyArray<string>;
   };
   cdnPurgeProgress: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
-    kind: "upload" | "download";
-    progress: msRest.TransferProgressEvent;
+    iteration: number;
   };
-  cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"];
+  cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
+    purgeSuccess: boolean;
+  };
 }
 
 export interface UploadResult {
@@ -60,13 +60,17 @@ export const consoleLoggingRunEventEmitterBuilder = (
   builder.addEventListener("cdnPurgeStarting", () =>
     logger("Starting Azure CDN endpoint purge"),
   );
-  builder.addEventListener("cdnPurgeProgress", (arg) =>
+  builder.addEventListener("cdnPurgeProgress", (arg) => {
+    if (arg.iteration % 10 === 0) {
+      logger(`Waiting for Azure CDN endpoint purge... (~${arg.iteration}s)`);
+    }
+  });
+  builder.addEventListener("cdnPurgeCompleted", (arg) =>
     logger(
-      `Azure CDN endpoint purge progress: ${arg.kind}, ${arg.progress.loadedBytes}`,
+      `Completed Azure CDN endpoint purge ${
+        arg.purgeSuccess ? "" : "un"
+      }successfully.`,
     ),
-  );
-  builder.addEventListener("cdnPurgeCompleted", () =>
-    logger("Completed Azure CDN endpoint purge"),
   );
 
   return builder;
