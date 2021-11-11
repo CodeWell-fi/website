@@ -29,60 +29,60 @@ const createRecordType = <P extends t.Props, TRecordType extends RecordType>(
     },
     `Record${recordType}`,
   );
+
+const record = t.union(
+  [
+    createRecordType(RecordType.A, {
+      address: validation.nonEmptyString,
+    }),
+    createRecordType(RecordType.AAAA, {
+      address: validation.nonEmptyString,
+    }),
+    createRecordType(RecordType.CAA, {
+      flags: t.Integer,
+      tag: t.string,
+      value: t.string,
+    }),
+    createRecordType(RecordType.CNAME, {
+      cname: t.string,
+    }),
+    createRecordType(RecordType.MX, {
+      exchange: t.string,
+      preference: t.Integer,
+    }),
+    createRecordType(RecordType.NS, {
+      nsdname: t.string,
+    }),
+    createRecordType(RecordType.PTR, {
+      ptrdname: t.string,
+    }),
+    createRecordType(RecordType.SOA, {
+      email: t.string,
+      expireTime: t.Integer,
+      host: t.string,
+      minimumTTL: t.Integer,
+      refereshTime: t.Integer,
+      retryTime: t.Integer,
+      serialNumber: t.Integer,
+    }),
+    createRecordType(RecordType.SRV, {
+      port: t.Integer,
+      priority: t.Integer,
+      target: t.string,
+      weight: t.Integer,
+    }),
+    createRecordType(RecordType.TXT, {
+      value: t.array(t.string),
+    }),
+  ],
+  "AdditionalRecord",
+);
+export type Record = t.TypeOf<typeof record>;
 export const configuration = t.type(
   {
     resourceGroupName: validation.nonEmptyString,
     dnsZoneName: validation.nonEmptyString,
-    additionalRecords: t.array(
-      t.union(
-        [
-          createRecordType(RecordType.A, {
-            address: validation.nonEmptyString,
-          }),
-          createRecordType(RecordType.AAAA, {
-            address: validation.nonEmptyString,
-          }),
-          createRecordType(RecordType.CAA, {
-            flags: t.Integer,
-            tag: t.string,
-            value: t.string,
-          }),
-          createRecordType(RecordType.CNAME, {
-            cname: t.string,
-          }),
-          createRecordType(RecordType.MX, {
-            exchange: t.string,
-            preference: t.Integer,
-          }),
-          createRecordType(RecordType.NS, {
-            nsdname: t.string,
-          }),
-          createRecordType(RecordType.PTR, {
-            ptrdname: t.string,
-          }),
-          createRecordType(RecordType.SOA, {
-            email: t.string,
-            expireTime: t.Integer,
-            host: t.string,
-            minimumTTL: t.Integer,
-            refereshTime: t.Integer,
-            retryTime: t.Integer,
-            serialNumber: t.Integer,
-          }),
-          createRecordType(RecordType.SRV, {
-            port: t.Integer,
-            priority: t.Integer,
-            target: t.string,
-            weight: t.Integer,
-          }),
-          createRecordType(RecordType.TXT, {
-            value: t.array(t.string),
-          }),
-        ],
-        "AdditionalRecord",
-      ),
-      "AdditionalRecordList",
-    ),
+    additionalRecords: t.array(record, "AdditionalRecordList"),
     dnsZoneContributorSPNames: t.array(validation.nonEmptyString),
   },
   "DNSPipelineConfig",
