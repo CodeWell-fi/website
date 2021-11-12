@@ -1,8 +1,10 @@
 import test, { ExecutionContext } from "ava";
 import * as pulumi from "@pulumi/pulumi";
 import * as nw from "@pulumi/azure-native/network";
+import * as azureTypes from "@pulumi/azure-native/types";
 import * as spec from "../resources";
 import * as config from "../input";
+import { isDeepStrictEqual } from "util";
 
 declare module "@pulumi/pulumi" {
   // Pulumi's type declaration for this function does not cover records with different types for their values.
@@ -55,43 +57,50 @@ const performTestAsync = (
       pulumi
         .all({
           zoneName: zone.zoneName,
-          records: pulumi.all([
-            records.map((record) => {
-              const commonProps = {
-                relativeName: record.relativeRecordSetName,
-                type: record.recordType,
-                ttl: record.ttl,
-              };
-              // Reverse engineer the record from Pulumi resource into same shape as config
-              const processedRecord: pulumi.Output<AllOptional<config.Record>> =
-                pulumi.all(commonProps).apply(({ type, ...commonProps }) => {
-                  switch (type) {
-                    case config.RecordType.A:
-                      return pulumi.all({
-                        type,
-                        ...commonProps,
-                        address: pulumi
-                          .all([record.aRecords])
-                          .apply(
-                            ([aRecords]) =>
-                              getSingleFromArray(aRecords).ipv4Address,
-                          ),
-                      });
-                    default:
-                      throw new Error("");
-                  }
+          records: pulumi
+            .all(records.map(getAllRecords))
+            .apply((allRecords) => {
+              return allRecords
+                .flatMap((r) => r)
+                .map(({ commonProps, recordEntry }) => {
+                  // Reverse engineer the record from Pulumi resource into same shape as config
+                  const processedRecord: pulumi.Output<
+                    AllOptional<config.Record>
+                  > = pulumi
+                    .all(commonProps)
+                    .apply(({ type, ...commonProps }) => {
+                      switch (type) {
+                        case config.RecordType.A:
+                          return pulumi.all({
+                            type,
+                            ...commonProps,
+                            address: (
+                              recordEntry as azureTypes.input.network.ARecordArgs
+                            ).ipv4Address,
+                          });
+                        default:
+                          throw new Error("");
+                      }
+                    });
+                  return processedRecord;
                 });
-              return processedRecord;
             }),
-          ]),
         })
-        .apply(({ zoneName, records: [records] }) => {
+        .apply(({ zoneName, records }) => {
           try {
             c.deepEqual(zoneName, input.dnsZoneName);
             c.deepEqual(records.length, input.additionalRecords.length);
-            records.every((record, idx) => {
-              const inputRecord = input.additionalRecords[idx];
-              c.deepEqual(record, inputRecord);
+            // Match input and output records order-insensitively
+            records.every((record) => {
+              c.deepEqual(
+                input.additionalRecords.filter((inputRecord) =>
+                  isDeepStrictEqual(inputRecord, record),
+                ).length,
+                1,
+                `The output record ${JSON.stringify(
+                  record,
+                )} must have exactly one match from input records.`,
+              );
             });
             observer.complete();
           } catch (e) {
@@ -117,14 +126,61 @@ type AllOptional<TArgs, TMandatoryKey extends keyof TArgs = never> = {
   [P in keyof TArgs]: P extends TMandatoryKey ? TArgs[P] : TArgs[P] | undefined;
 };
 
-const getSingleFromArray = <T>(array: ReadonlyArray<T> | undefined) => {
-  if (array && array.length === 1) {
-    return array[0];
-  } else {
-    throw new Error(
-      `Array was ${array ? `of wrong size (${array.length})` : "undefined"}.`,
-    );
-  }
+const RecordTypeProperties = {
+  A: "aRecords",
+  AAAA: "aaaaRecords",
+  CAA: "caaRecords",
+  CNAME: "cnameRecord",
+  MX: "mxRecords",
+  // NAPTR: "NAPTR",
+  NS: "nsRecords",
+  PTR: "ptrRecords",
+  SOA: "soaRecord",
+  // SPF: "SPF",
+  SRV: "srvRecords",
+  TXT: "txtRecords",
+} as const;
+
+// This extracts all records of all record types from single record set, handling all the complexity of those being behing pulumi.Output
+const getAllRecords = (recordSet: ArgsOutputNoOptional<nw.RecordSetArgs>) => {
+  return pulumi
+    .all(
+      Object.keys(config.RecordType)
+        .map(
+          (rType) =>
+            [
+              rType,
+              recordSet[RecordTypeProperties[rType as config.RecordType]],
+            ] as const,
+        )
+        .reduce<
+          {
+            [P in config.RecordType]?: nw.RecordSet[typeof RecordTypeProperties[P]];
+          }
+        >((dict, [rType, records]) => {
+          if (records) {
+            // eslint-disable-next-line
+            dict[rType as keyof typeof dict] = records as any;
+          }
+          return dict;
+        }, {}),
+    )
+    .apply((allRecords) => {
+      return Object.entries(allRecords)
+        .flatMap(([rType, rEntries]) => {
+          return (
+            rEntries ? (Array.isArray(rEntries) ? rEntries : [rEntries]) : []
+          ).map((rEntry) => [rType, rEntry] as const);
+        })
+        .map(([rType, rEntry]) => ({
+          commonProps: {
+            relativeName: recordSet.relativeRecordSetName,
+            type: rType as config.RecordType,
+            ttl: recordSet.ttl,
+          },
+          recordEntry: rEntry,
+        }));
+    });
 };
 
 const getMockedResource = <
