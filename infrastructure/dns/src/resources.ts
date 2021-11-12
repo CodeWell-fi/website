@@ -98,9 +98,7 @@ export const pulumiResources = ({
           ...commonProps,
           caaRecords: [
             {
-              flags: record.flags,
-              value: record.value,
-              tag: record.tag,
+              ...record,
             },
           ],
         });
@@ -108,7 +106,7 @@ export const pulumiResources = ({
         return new nw.RecordSet(recordSetID, {
           ...commonProps,
           cnameRecord: {
-            cname: record.cname,
+            ...record,
           },
         });
       case input.RecordType.MX:
@@ -116,8 +114,7 @@ export const pulumiResources = ({
           ...commonProps,
           mxRecords: [
             {
-              exchange: record.exchange,
-              preference: record.preference,
+              ...record,
             },
           ],
         });
@@ -126,7 +123,7 @@ export const pulumiResources = ({
           ...commonProps,
           nsRecords: [
             {
-              nsdname: record.nsdname,
+              ...record,
             },
           ],
         });
@@ -135,7 +132,7 @@ export const pulumiResources = ({
           ...commonProps,
           ptrRecords: [
             {
-              ptrdname: record.ptrdname,
+              ...record,
             },
           ],
         });
@@ -160,7 +157,7 @@ export const pulumiResources = ({
           ...commonProps,
           txtRecords: [
             {
-              value: record.value,
+              ...record,
             },
           ],
         });

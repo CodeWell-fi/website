@@ -1,10 +1,13 @@
 import test, { ExecutionContext } from "ava";
 import * as pulumi from "@pulumi/pulumi";
 import * as nw from "@pulumi/azure-native/network";
+import * as auth from "@pulumi/azure-native/authorization";
 import * as azureTypes from "@pulumi/azure-native/types";
+import * as validation from "@data-heaving/common-validation";
+import { isDeepStrictEqual } from "util";
+import * as fs from "fs/promises";
 import * as spec from "../resources";
 import * as config from "../input";
-import { isDeepStrictEqual } from "util";
 
 declare module "@pulumi/pulumi" {
   // Pulumi's type declaration for this function does not cover records with different types for their values.
@@ -18,45 +21,53 @@ test("Input is taken into account when creating resources", (c) => {
   const roleDefinitionId = "someRoleDefinition";
   return {
     subscribe: (observer: Observer) => {
-      performTestAsync(c, observer, [
+      void performTestAsync(c, observer, [
         {
-          input: {
-            rgName: "some-rg",
-            dnsZoneName: "example.com",
-            additionalRecords: [
-              {
-                type: "A",
-                relativeName: "test",
-                address: "1.2.3.4",
-                ttl: 3600,
-              },
-            ],
-            dnsZoneContributorSPIDs: [],
-            roleDefinitionId,
-          },
+          rgName: "some-rg",
+          dnsZoneName: "example.com",
+          additionalRecords: [
+            {
+              type: "A",
+              relativeName: "test",
+              address: "1.2.3.4",
+              ttl: 3600,
+            },
+          ],
+          dnsZoneContributorSPIDs: ["dummy-id"],
+          roleDefinitionId,
         },
+        async () =>
+          validation.decodeOrThrow(
+            config.configuration.decode,
+            JSON.parse(await fs.readFile("./config/config-dev.json", "utf-8")),
+          ),
       ]);
     },
   };
 });
 
-const performTestAsync = (
+const performTestAsync = async (
   c: ExecutionContext,
   observer: Observer,
-  inputs: ReadonlyArray<{
-    input: spec.ResourcesConfiguration;
-  }>,
+  inputs: ReadonlyArray<
+    | spec.ResourcesConfiguration
+    | (() => spec.ResourcesConfiguration | Promise<spec.ResourcesConfiguration>)
+  >,
 ) => {
   try {
-    inputs.forEach(({ input }) => {
+    const inputObjects = await Promise.all(
+      inputs.map((input) => {
+        return typeof input === "function" ? input() : input;
+      }),
+    );
+    inputObjects.forEach((input) => {
       const resources = spec.pulumiResources(input);
-      const zone = getMockedResource(resources.zone, nw.Zone);
       const records = resources.records.map((record) =>
         getMockedResource(record, nw.RecordSet),
       );
       pulumi
         .all({
-          zoneName: zone.zoneName,
+          zoneName: getMockedResource(resources.zone, nw.Zone).zoneName,
           records: pulumi
             .all(records.map(getAllRecords))
             .apply((allRecords) => {
@@ -65,33 +76,61 @@ const performTestAsync = (
                 .map(({ commonProps, recordEntry }) => {
                   // Reverse engineer the record from Pulumi resource into same shape as config
                   const processedRecord: pulumi.Output<
-                    AllOptional<config.Record>
+                    AllOptional<config.Record, "type">
                   > = pulumi
                     .all(commonProps)
-                    .apply(({ type, ...commonProps }) => {
-                      switch (type) {
-                        case config.RecordType.A:
-                          return pulumi.all({
-                            type,
-                            ...commonProps,
-                            address: (
-                              recordEntry as azureTypes.input.network.ARecordArgs
-                            ).ipv4Address,
-                          });
-                        default:
-                          throw new Error("");
-                      }
-                    });
+                    .apply<AllOptional<config.Record, "type">>(
+                      ({ type, ...commonProps }) => {
+                        switch (type) {
+                          case config.RecordType.A:
+                            return pulumi.all({
+                              type,
+                              ...commonProps,
+                              address: (
+                                recordEntry as azureTypes.input.network.ARecordArgs
+                              ).ipv4Address,
+                            });
+                          case config.RecordType.AAAA:
+                            return pulumi.all({
+                              type,
+                              ...commonProps,
+                              address: (
+                                recordEntry as azureTypes.input.network.AaaaRecordArgs
+                              ).ipv6Address,
+                            });
+                          default:
+                            return pulumi.all({
+                              type,
+                              ...commonProps,
+                              ...recordEntry,
+                            });
+                        }
+                      },
+                    );
                   return processedRecord;
                 });
             }),
+          roleAssignments: pulumi.all(
+            resources.roleAssignments.map((roleAssignmentResource) => {
+              const roleAssignment = getMockedResource(
+                roleAssignmentResource,
+                auth.RoleAssignment,
+              );
+              return {
+                principalId: roleAssignment.principalId,
+                roleDefinitionId: roleAssignment.roleDefinitionId,
+              };
+            }),
+          ),
         })
-        .apply(({ zoneName, records }) => {
+        .apply(({ zoneName, records, roleAssignments }) => {
           try {
+            // Match DNS zone
             c.deepEqual(zoneName, input.dnsZoneName);
+            // Match DNS zone records
             c.deepEqual(records.length, input.additionalRecords.length);
             // Match input and output records order-insensitively
-            records.every((record) => {
+            for (const record of records) {
               c.deepEqual(
                 input.additionalRecords.filter((inputRecord) =>
                   isDeepStrictEqual(inputRecord, record),
@@ -101,7 +140,22 @@ const performTestAsync = (
                   record,
                 )} must have exactly one match from input records.`,
               );
-            });
+            }
+            // Match SP role assignments
+            c.deepEqual(
+              roleAssignments.length,
+              input.dnsZoneContributorSPIDs.length,
+            );
+            for (const [idx, roleAssignment] of roleAssignments.entries()) {
+              const spRoleAssignmentInfo = input.dnsZoneContributorSPIDs[idx];
+              c.deepEqual(roleAssignment, {
+                principalId:
+                  typeof spRoleAssignmentInfo === "string"
+                    ? spRoleAssignmentInfo
+                    : spRoleAssignmentInfo.principalId,
+                roleDefinitionId: input.roleDefinitionId,
+              });
+            }
             observer.complete();
           } catch (e) {
             observer.error(e);
@@ -123,8 +177,11 @@ type ArgsOutputNoOptional<TArgs> = {
 };
 
 type AllOptional<TArgs, TMandatoryKey extends keyof TArgs = never> = {
-  [P in keyof TArgs]: P extends TMandatoryKey ? TArgs[P] : TArgs[P] | undefined;
-};
+  [P in TMandatoryKey]: TArgs[P];
+} &
+  {
+    [P in keyof Omit<TArgs, TMandatoryKey>]?: TArgs[P] | undefined;
+  };
 
 const RecordTypeProperties = {
   A: "aRecords",

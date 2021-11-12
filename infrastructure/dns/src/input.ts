@@ -60,7 +60,7 @@ const record = t.union(
       email: t.string,
       expireTime: t.Integer,
       host: t.string,
-      minimumTTL: t.Integer,
+      minimumTtl: t.Integer,
       refereshTime: t.Integer,
       retryTime: t.Integer,
       serialNumber: t.Integer,
