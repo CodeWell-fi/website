@@ -42,31 +42,6 @@ const dynamicProviderInputs = t.type(
   {
     domainID: t.string,
     httpsEnabled: t.boolean,
-    // We must pass azure config like this - if we try to use Pulumi's Azure Provider's getToken function (from "@pulumi/azure-native/authorization"), we will get (a rather mystical) error:
-    //
-    // pulumi.errors.RunError: Program run without the Pulumi engine available; re-run using the 'pulumi' CLI
-    //
-    // It is because providers are isolated - therefore our custom dynamic provider can't access other provider's configuration
-    // More info: https://github.com/pulumi/pulumi/issues/2580#issuecomment-781559171
-    // azureConfig: t.intersection(
-    //   [
-    //     t.type(
-    //       {
-    //         clientId: validation.uuid,
-    //         subscriptionId: validation.uuid,
-    //         tenantId: validation.uuid,
-    //       },
-    //       "CustomDNSHTTPSEnablingInputsAzureConfigMandatory",
-    //     ),
-    //     t.partial(
-    //       {
-    //         clientCertificatePath: validation.nonEmptyString,
-    //       },
-    //       "CustomDNSHTTPSEnablingInputsAzureConfigOptional",
-    //     ),
-    //   ],
-    //   "CustomDNSHTTPSEnablingInputsAzureConfig",
-    // ),
   },
   "CustomDNSHTTPSEnablingInputs",
 );

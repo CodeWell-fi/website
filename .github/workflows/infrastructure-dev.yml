@@ -113,7 +113,7 @@ jobs:
           set -e
 
           npm ci --ignore-scripts
-          npm run build
+          npm run tsc
 
           # Disable creation of output file by setting it to empty string
           export WEBSITE_INFRA_CONFIG="$(cat "config/config-${INFRA_ENV}.json")"

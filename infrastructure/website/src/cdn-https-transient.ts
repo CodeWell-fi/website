@@ -7,7 +7,6 @@ import { promisify } from "util";
 
 const execFileAsync = promisify(execFile);
 // Pulumi will serialize this whole module into state file. Therefore we use this trick with env name, because Azure credentials may differ between the runs.
-// We can safely assume that tenant and client IDs will remain the same
 const credentialsEnvName =
   "___PULUMI_CUSTOM_PROVIDER_AZURE_CDN_HTTPS_CREDENTIALS___";
 
