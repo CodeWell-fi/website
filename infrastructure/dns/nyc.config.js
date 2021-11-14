@@ -6,7 +6,8 @@ module.exports = {
   ],
   "exclude": [
     "dist/**/*.d.ts",
-    "**/__test__/*.[jt]s"
+    "**/__test__/*.[jt]s",
+    "dist/index.js", // For index.ts, it is enough that it passes compiler
   ],
   "reporter": [
     "text",
