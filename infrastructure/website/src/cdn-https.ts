@@ -325,7 +325,7 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
 
 const execFileAsync = promisify(execFile);
 // Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
-export const createCredentials = async (
+const createCredentials = async (
   args: pipeline.AzureBackendPulumiProgramArgs,
 ) => {
   const { auth, azure } = args;
