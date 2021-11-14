@@ -262,10 +262,7 @@ export class CDNCustomDomainResourceProvider
     );
   }
 
-  private performHttpsChange = async (
-    domainID: string,
-    enableHttps: boolean,
-  ) => {
+  private async performHttpsChange(domainID: string, enableHttps: boolean) {
     const url = constructURLFromDomainID(domainID);
     const httpClient = await this.constructHttpClient();
     let response = await httpClient.sendRequest({
@@ -304,7 +301,7 @@ export class CDNCustomDomainResourceProvider
         method: "GET",
       });
     }
-  };
+  }
 }
 
 export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
