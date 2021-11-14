@@ -4,7 +4,6 @@ import * as msRest from "@azure/ms-rest-js";
 import * as t from "io-ts";
 import * as utils from "@data-heaving/common";
 import * as transient from "./cdn-https-transient";
-import type * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 // import * as validation from "@data-heaving/common-validation";
 
 // Notice! The validation objects in io-ts library can not be used by Pulumi Dynamic Custom Provider ( CDNCustomDomainResourceProvider class below ).
@@ -163,13 +162,9 @@ const deserializeCustomDomainResponse = (
 //   JSON.parse(response.body)
 // );
 
-const performHttpsChange = async (
-  args: pipeline.AzureBackendPulumiProgramArgs,
-  domainID: string,
-  enableHttps: boolean,
-) => {
+const performHttpsChange = async (domainID: string, enableHttps: boolean) => {
   const url = constructURLFromDomainID(domainID);
-  const httpClient = await transient.constructHttpClient2(args);
+  const httpClient = transient.constructHttpClient();
   let response = await httpClient.sendRequest({
     url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
     method: "POST",
@@ -206,13 +201,14 @@ const performHttpsChange = async (
   }
 };
 
-export class CDNCustomDomainResourceProvider
+class CDNCustomDomainResourceProvider
   implements pulumi.dynamic.ResourceProvider
 {
-  constructor(
-    private readonly name: string,
-    private readonly args: pipeline.AzureBackendPulumiProgramArgs,
-  ) {}
+  private readonly name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
 
   async create(
     inputs: DynamicProviderInputs,
@@ -221,7 +217,7 @@ export class CDNCustomDomainResourceProvider
     // Enabling HTTPS is a long (15ish mins at best) operation, and Azure doesn't make it no-op if it is already enabled.
     // So only do it if needed
     if (httpsEnabled !== inputs.httpsEnabled) {
-      await performHttpsChange(this.args, inputs.domainID, inputs.httpsEnabled);
+      await performHttpsChange(inputs.domainID, inputs.httpsEnabled);
     }
 
     const outs: DynamicProviderOutputs = {
@@ -280,11 +276,7 @@ export class CDNCustomDomainResourceProvider
   ): Promise<pulumi.dynamic.UpdateResult> {
     // We have two inputs, domainID causes recreation and thus changing that will not enter here
     // The only remaining possibility is change of httpsEnabled
-    await performHttpsChange(
-      this.args,
-      newInputs.domainID,
-      newInputs.httpsEnabled,
-    );
+    await performHttpsChange(newInputs.domainID, newInputs.httpsEnabled);
     currentOutputs.httpsEnabled = newInputs.httpsEnabled;
     return {
       outs: currentOutputs,
@@ -294,15 +286,13 @@ export class CDNCustomDomainResourceProvider
   async delete(id: string, props: DynamicProviderOutputs): Promise<void> {
     // Deleting this resource => disabling https
     if (props.httpsEnabled) {
-      await performHttpsChange(this.args, props.domainID, false);
+      await performHttpsChange(props.domainID, false);
     }
   }
 
   private async performRead(currentProps: DynamicProviderInputs, name: string) {
     const customDomainState = deserializeCustomDomainResponse(
-      await (
-        await transient.constructHttpClient2(this.args)
-      ).sendRequest({
+      await transient.constructHttpClient().sendRequest({
         url: `${constructURLFromDomainID(currentProps.domainID)}${urlSuffix}`,
         method: "GET",
       }),
@@ -324,14 +314,13 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
   constructor(
     name: string,
     args: CustomDomainHTTPSOptions,
-    provider: CDNCustomDomainResourceProvider,
     opts?: pulumi.CustomResourceOptions,
   ) {
     opts = pulumi.mergeOptions(opts, {
       version: azureUtils.getVersion(),
     });
     super(
-      provider,
+      new CDNCustomDomainResourceProvider(name),
       `azure-native-custom:cdn:CustomDomainHttpsHandler:${name}`,
       args,
       opts,

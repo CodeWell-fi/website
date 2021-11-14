@@ -1,6 +1,6 @@
 import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
-import type * as pipeline from "@data-heaving/pulumi-azure-pipeline";
+import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import { env } from "process";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -84,59 +84,6 @@ export const constructHttpClient = () => {
           currentCredentials.clientId,
           currentCredentials.pemPath,
         ),
-    // Uncomment for detailed logging, which also **exposes token values to console output**!
-    // {
-    //   // add log policy to list of default factories.
-    //   requestPolicyFactories: (factories) =>
-    //     factories.concat([msRest.logPolicy()]),
-    // },
-  );
-};
-
-export const constructHttpClient2 = async (
-  args: pipeline.AzureBackendPulumiProgramArgs,
-) => {
-  const { auth, azure } = args;
-  let creds: identity.TokenCredential;
-  switch (auth.type) {
-    case "sp":
-      {
-        const passwordEnvName = "PFX_PASSWORD";
-        const pw = auth.pfxPassword ?? "";
-        const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
-
-        await execFileAsync(
-          "openssl",
-          [
-            "pkcs12",
-            "-in",
-            auth.pfxPath,
-            "-out",
-            pemPath,
-            "-nodes",
-            "-password",
-            `env:${passwordEnvName}`,
-          ],
-          {
-            env: {
-              [passwordEnvName]: pw,
-            },
-          },
-        );
-
-        creds = new identity.ClientCertificateCredential(
-          azure.tenantId,
-          auth.clientId,
-          pemPath,
-        );
-      }
-      break;
-    case "msi":
-      creds = new identity.ManagedIdentityCredential(auth.clientId);
-      break;
-  }
-  return new msRest.ServiceClient(
-    creds,
     // Uncomment for detailed logging, which also **exposes token values to console output**!
     // {
     //   // add log policy to list of default factories.
