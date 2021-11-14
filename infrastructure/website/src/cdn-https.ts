@@ -4,6 +4,10 @@ import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
 import * as t from "io-ts";
 import * as utils from "@data-heaving/common";
+import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import * as fs from "fs/promises";
 
 // import * as validation from "@data-heaving/common-validation";
 
@@ -141,7 +145,7 @@ export class CDNCustomDomainResourceProvider
 {
   constructor(
     private readonly name: string,
-    private readonly credential: identity.TokenCredential,
+    private readonly pipelineArgs: pipeline.AzureBackendPulumiProgramArgs,
   ) {}
 
   async create(
@@ -226,7 +230,9 @@ export class CDNCustomDomainResourceProvider
 
   private async performRead(currentProps: DynamicProviderInputs, name: string) {
     const customDomainState = deserializeCustomDomainResponse(
-      await this.constructHttpClient().sendRequest({
+      await (
+        await this.constructHttpClient()
+      ).sendRequest({
         url: `${constructURLFromDomainID(currentProps.domainID)}${urlSuffix}`,
         method: "GET",
       }),
@@ -243,9 +249,10 @@ export class CDNCustomDomainResourceProvider
     };
   }
 
-  private constructHttpClient() {
+  private async constructHttpClient() {
+    // TODO cache credentials, but without causing "Error serializing '() => provider'"
     return new msRest.ServiceClient(
-      this.credential,
+      await createCredentials(this.pipelineArgs),
       // Uncomment for detailed logging, which also **exposes token values to console output**!
       // {
       //   // add log policy to list of default factories.
@@ -260,7 +267,7 @@ export class CDNCustomDomainResourceProvider
     enableHttps: boolean,
   ) => {
     const url = constructURLFromDomainID(domainID);
-    const httpClient = this.constructHttpClient();
+    const httpClient = await this.constructHttpClient();
     let response = await httpClient.sendRequest({
       url: `${url}/${
         enableHttps ? "enable" : "disable"
@@ -318,3 +325,57 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
     );
   }
 }
+
+const execFileAsync = promisify(execFile);
+// Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
+export const createCredentials = async (
+  args: pipeline.AzureBackendPulumiProgramArgs,
+) => {
+  const { auth, azure } = args;
+  let creds: identity.TokenCredential;
+  switch (auth.type) {
+    case "sp":
+      {
+        const passwordEnvName = "PFX_PASSWORD";
+        const pw = auth.pfxPassword ?? "";
+        const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
+
+        await execFileAsync(
+          "openssl",
+          [
+            "pkcs12",
+            "-in",
+            auth.pfxPath,
+            "-out",
+            pemPath,
+            "-nodes",
+            "-password",
+            `env:${passwordEnvName}`,
+          ],
+          {
+            env: {
+              [passwordEnvName]: pw,
+            },
+          },
+        );
+
+        try {
+          creds = new identity.ClientCertificateCredential(
+            azure.tenantId,
+            auth.clientId,
+            pemPath,
+          );
+        } finally {
+          await fs.rm(pemPath, { force: true });
+        }
+      }
+      break;
+    case "msi":
+      creds = new identity.ManagedIdentityCredential(auth.clientId);
+      break;
+    default:
+      throw new Error(`Unrecognized auth type ${args.auth.type}`);
+  }
+
+  return creds;
+};

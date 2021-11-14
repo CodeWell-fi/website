@@ -3,7 +3,7 @@ import * as input from "./input";
 import * as validation from "@data-heaving/common-validation";
 import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 import pulumiProgram from "./resources";
-import * as httpsProvider from "./cdn-https-provider";
+import * as httpsProvider from "./cdn-https";
 
 const doThrow = <T>(msg: string): T => {
   throw new Error(msg);
@@ -30,7 +30,10 @@ const pulumiPipeline: pipeline.PulumiPipelineExport = {
     projectName: "website",
     stackName: "infrastructure",
     program: async (args: pipeline.AzureBackendPulumiProgramArgs) =>
-      pulumiProgram(await httpsProvider.createDynamicProvider(args), config),
+      pulumiProgram(
+        new httpsProvider.CDNCustomDomainResourceProvider("default", args),
+        config,
+      ),
   },
 
   // It looks like ARM_STORAGE_USE_AZUREAD is used only by legacy Pulumi azure provider, not the new azure-native...
