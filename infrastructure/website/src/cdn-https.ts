@@ -1,14 +1,10 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as azureUtils from "@pulumi/azure-native/utilities";
-import * as identity from "@azure/identity";
 import * as msRest from "@azure/ms-rest-js";
 import * as t from "io-ts";
 import * as utils from "@data-heaving/common";
-import * as pipeline from "@data-heaving/pulumi-azure-pipeline";
-import { execFile } from "child_process";
-import { promisify } from "util";
-import * as fs from "fs/promises";
-
+import * as transient from "./cdn-https-transient";
+import type * as pipeline from "@data-heaving/pulumi-azure-pipeline";
 // import * as validation from "@data-heaving/common-validation";
 
 // Notice! The validation objects in io-ts library can not be used by Pulumi Dynamic Custom Provider ( CDNCustomDomainResourceProvider class below ).
@@ -38,13 +34,40 @@ import * as fs from "fs/promises";
 // The interesting thing is, the code ending up in Pulumi backend file is only from this file - while the native function is in the library.
 // So Pulumi will nevertheless need to load the library containing native function even in different process, therefore I think Pulumi is a bit overreacting here.
 export type CustomDomainHTTPSOptions = {
-  [P in keyof DynamicProviderInputs]: pulumi.Input<DynamicProviderInputs[P]>;
+  [P in keyof DynamicProviderInputs]: P extends "azureConfig"
+    ? DynamicProviderInputs[P]
+    : pulumi.Input<DynamicProviderInputs[P]>;
 };
 
 const dynamicProviderInputs = t.type(
   {
     domainID: t.string,
     httpsEnabled: t.boolean,
+    // We must pass azure config like this - if we try to use Pulumi's Azure Provider's getToken function (from "@pulumi/azure-native/authorization"), we will get (a rather mystical) error:
+    //
+    // pulumi.errors.RunError: Program run without the Pulumi engine available; re-run using the 'pulumi' CLI
+    //
+    // It is because providers are isolated - therefore our custom dynamic provider can't access other provider's configuration
+    // More info: https://github.com/pulumi/pulumi/issues/2580#issuecomment-781559171
+    // azureConfig: t.intersection(
+    //   [
+    //     t.type(
+    //       {
+    //         clientId: validation.uuid,
+    //         subscriptionId: validation.uuid,
+    //         tenantId: validation.uuid,
+    //       },
+    //       "CustomDNSHTTPSEnablingInputsAzureConfigMandatory",
+    //     ),
+    //     t.partial(
+    //       {
+    //         clientCertificatePath: validation.nonEmptyString,
+    //       },
+    //       "CustomDNSHTTPSEnablingInputsAzureConfigOptional",
+    //     ),
+    //   ],
+    //   "CustomDNSHTTPSEnablingInputsAzureConfig",
+    // ),
   },
   "CustomDNSHTTPSEnablingInputs",
 );
@@ -140,12 +163,55 @@ const deserializeCustomDomainResponse = (
 //   JSON.parse(response.body)
 // );
 
+const performHttpsChange = async (
+  args: pipeline.AzureBackendPulumiProgramArgs,
+  domainID: string,
+  enableHttps: boolean,
+) => {
+  const url = constructURLFromDomainID(domainID);
+  const httpClient = await transient.constructHttpClient2(args);
+  let response = await httpClient.sendRequest({
+    url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
+    method: "POST",
+    body: enableHttps ? DefaultHttpsParametersCdn : undefined,
+  });
+  if (response.status !== 200 && response.status !== 202) {
+    const errorMsg = `Initial request failed with ${response.status}:\n${response.bodyAsText}.`;
+    await pulumi.log.error(errorMsg, undefined, undefined, true);
+    throw new Error(errorMsg);
+  }
+  const targetState: CustomDomainResponse["properties"]["customHttpsProvisioningState"] =
+    enableHttps ? "Enabled" : "Disabled";
+  let domainResponse: CustomDomainResponse;
+  while (
+    (domainResponse = deserializeCustomDomainResponse(response)).properties
+      .customHttpsProvisioningState !== targetState
+  ) {
+    if (domainResponse.properties.customHttpsProvisioningState === "Failed") {
+      const errorMsg = `Enabling HTTPS failed: ${domainResponse.properties.customHttpsProvisioningSubstate}.`;
+      await pulumi.log.error(errorMsg, undefined, undefined, true);
+      throw new Error(errorMsg);
+    }
+    await pulumi.log.info(
+      `Waiting ... ${domainResponse.properties.customHttpsProvisioningState} ${domainResponse.properties.customHttpsProvisioningSubstate}`,
+      undefined,
+      undefined,
+      true,
+    );
+    await utils.sleep(10000);
+    response = await httpClient.sendRequest({
+      url: `${url}${urlSuffix}`,
+      method: "GET",
+    });
+  }
+};
+
 export class CDNCustomDomainResourceProvider
   implements pulumi.dynamic.ResourceProvider
 {
   constructor(
     private readonly name: string,
-    private readonly pipelineArgs: pipeline.AzureBackendPulumiProgramArgs,
+    private readonly args: pipeline.AzureBackendPulumiProgramArgs,
   ) {}
 
   async create(
@@ -155,11 +221,7 @@ export class CDNCustomDomainResourceProvider
     // Enabling HTTPS is a long (15ish mins at best) operation, and Azure doesn't make it no-op if it is already enabled.
     // So only do it if needed
     if (httpsEnabled !== inputs.httpsEnabled) {
-      await performHttpsChange(
-        this.pipelineArgs,
-        inputs.domainID,
-        inputs.httpsEnabled,
-      );
+      await performHttpsChange(this.args, inputs.domainID, inputs.httpsEnabled);
     }
 
     const outs: DynamicProviderOutputs = {
@@ -219,7 +281,7 @@ export class CDNCustomDomainResourceProvider
     // We have two inputs, domainID causes recreation and thus changing that will not enter here
     // The only remaining possibility is change of httpsEnabled
     await performHttpsChange(
-      this.pipelineArgs,
+      this.args,
       newInputs.domainID,
       newInputs.httpsEnabled,
     );
@@ -232,14 +294,14 @@ export class CDNCustomDomainResourceProvider
   async delete(id: string, props: DynamicProviderOutputs): Promise<void> {
     // Deleting this resource => disabling https
     if (props.httpsEnabled) {
-      await performHttpsChange(this.pipelineArgs, props.domainID, false);
+      await performHttpsChange(this.args, props.domainID, false);
     }
   }
 
   private async performRead(currentProps: DynamicProviderInputs, name: string) {
     const customDomainState = deserializeCustomDomainResponse(
       await (
-        await constructHttpClient(this.pipelineArgs)
+        await transient.constructHttpClient2(this.args)
       ).sendRequest({
         url: `${constructURLFromDomainID(currentProps.domainID)}${urlSuffix}`,
         method: "GET",
@@ -276,115 +338,3 @@ export class CDNCustomDomainHTTPSResource extends pulumi.dynamic.Resource {
     );
   }
 }
-
-const constructHttpClient = async (
-  pipelineArgs: pipeline.AzureBackendPulumiProgramArgs,
-) => {
-  // TODO cache credentials, but without causing "Error serializing '() => provider'"
-  return new msRest.ServiceClient(
-    await createCredentials(pipelineArgs),
-    // Uncomment for detailed logging, which also **exposes token values to console output**!
-    // {
-    //   // add log policy to list of default factories.
-    //   requestPolicyFactories: (factories) =>
-    //     factories.concat([msRest.logPolicy()]),
-    // },
-  );
-};
-
-const performHttpsChange = async (
-  pipelineArgs: pipeline.AzureBackendPulumiProgramArgs,
-  domainID: string,
-  enableHttps: boolean,
-) => {
-  const url = constructURLFromDomainID(domainID);
-  const httpClient = await constructHttpClient(pipelineArgs);
-  let response = await httpClient.sendRequest({
-    url: `${url}/${enableHttps ? "enable" : "disable"}CustomHttps${urlSuffix}`,
-    method: "POST",
-    body: enableHttps ? DefaultHttpsParametersCdn : undefined,
-  });
-  if (response.status !== 200 && response.status !== 202) {
-    const errorMsg = `Initial request failed with ${response.status}:\n${response.bodyAsText}.`;
-    await pulumi.log.error(errorMsg, undefined, undefined, true);
-    throw new Error(errorMsg);
-  }
-  const targetState: CustomDomainResponse["properties"]["customHttpsProvisioningState"] =
-    enableHttps ? "Enabled" : "Disabled";
-  let domainResponse: CustomDomainResponse;
-  while (
-    (domainResponse = deserializeCustomDomainResponse(response)).properties
-      .customHttpsProvisioningState !== targetState
-  ) {
-    if (domainResponse.properties.customHttpsProvisioningState === "Failed") {
-      const errorMsg = `Enabling HTTPS failed: ${domainResponse.properties.customHttpsProvisioningSubstate}.`;
-      await pulumi.log.error(errorMsg, undefined, undefined, true);
-      throw new Error(errorMsg);
-    }
-    await pulumi.log.info(
-      `Waiting ... ${domainResponse.properties.customHttpsProvisioningState} ${domainResponse.properties.customHttpsProvisioningSubstate}`,
-      undefined,
-      undefined,
-      true,
-    );
-    await utils.sleep(10000);
-    response = await httpClient.sendRequest({
-      url: `${url}${urlSuffix}`,
-      method: "GET",
-    });
-  }
-};
-
-const execFileAsync = promisify(execFile);
-// Since we are using @azure/identity to perform authentication, we must convert .pfx file to .pem file
-const createCredentials = async (
-  args: pipeline.AzureBackendPulumiProgramArgs,
-) => {
-  const { auth, azure } = args;
-  let creds: identity.TokenCredential;
-  switch (auth.type) {
-    case "sp":
-      {
-        const passwordEnvName = "PFX_PASSWORD";
-        const pw = auth.pfxPassword ?? "";
-        const pemPath = auth.pfxPath.replace(/\.pfx$/, ".pem");
-
-        await execFileAsync(
-          "openssl",
-          [
-            "pkcs12",
-            "-in",
-            auth.pfxPath,
-            "-out",
-            pemPath,
-            "-nodes",
-            "-password",
-            `env:${passwordEnvName}`,
-          ],
-          {
-            env: {
-              [passwordEnvName]: pw,
-            },
-          },
-        );
-
-        try {
-          creds = new identity.ClientCertificateCredential(
-            azure.tenantId,
-            auth.clientId,
-            pemPath,
-          );
-        } finally {
-          await fs.rm(pemPath, { force: true });
-        }
-      }
-      break;
-    case "msi":
-      creds = new identity.ManagedIdentityCredential(auth.clientId);
-      break;
-    default:
-      throw new Error(`Unrecognized auth type ${args.auth.type}`);
-  }
-
-  return creds;
-};
