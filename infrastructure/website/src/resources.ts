@@ -8,17 +8,30 @@ import * as input from "./input";
 import * as https from "./cdn-https";
 import * as naming from "./naming";
 
-const pulumiProgram = async ({
-  organization,
-  environment,
-  domainNames,
-  ...config
-}: input.Configuration) => {
-  const resourceID = "website";
-  // Create RG
-  const { name: resourceGroupName, location } =
-    await resources.getResourceGroup(config);
+const pulumiProgram = async (
+  cdnHttpsProvider: https.CDNCustomDomainResourceProvider,
+  config: input.Configuration,
+) => {
+  return createResources(
+    cdnHttpsProvider,
+    config,
+    await resources.getResourceGroup(config),
+  );
+};
 
+export const createResources = (
+  cdnHttpsProvider: https.CDNCustomDomainResourceProvider,
+  {
+    organization,
+    environment,
+    domainNames,
+  }: Omit<input.Configuration, "resourceGroupName">,
+  {
+    name: resourceGroupName,
+    location,
+  }: Pick<resources.GetResourceGroupResult, "name" | "location">,
+) => {
+  const resourceID = "website";
   // SA for hosting site files (.html and .js/.css)
   const sa = new storage.StorageAccount(resourceID, {
     resourceGroupName,
@@ -183,6 +196,7 @@ const pulumiProgram = async ({
         domainID: domain.id,
         httpsEnabled: true,
       },
+      cdnHttpsProvider,
       {
         parent: domain,
       },
