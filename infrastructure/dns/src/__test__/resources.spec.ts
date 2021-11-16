@@ -19,7 +19,7 @@ declare module "@pulumi/pulumi" {
 test("Resources created by code match the input configuration", (c) => {
   const roleDefinitionId = "someRoleDefinition";
   return {
-    subscribe: (observer: Observer) => {
+    subscribe: (observer: common.Observer) => {
       void performTestAsync(c, observer, [
         // First test with very simple config
         {
@@ -55,7 +55,7 @@ const configFileToResourcesInput = (
 
 const performTestAsync = async (
   c: ExecutionContext,
-  observer: Observer,
+  observer: common.Observer,
   inputs: ReadonlyArray<
     | spec.ResourcesConfiguration
     | (() => spec.ResourcesConfiguration | Promise<spec.ResourcesConfiguration>)
@@ -70,11 +70,11 @@ const performTestAsync = async (
     inputObjects.forEach((config) => {
       const resources = spec.pulumiResources(config);
       const records = resources.records.map((record) =>
-        getMockedResource(record, nw.RecordSet),
+        common.getMockedResource(record, nw.RecordSet),
       );
       pulumi
         .all({
-          zoneName: getMockedResource(resources.zone, nw.Zone).zoneName,
+          zoneName: common.getMockedResource(resources.zone, nw.Zone).zoneName,
           records: pulumi
             .all(records.map(getAllRecords))
             .apply((allRecords) => {
@@ -119,7 +119,7 @@ const performTestAsync = async (
             }),
           roleAssignments: pulumi.all(
             resources.roleAssignments.map((roleAssignmentResource) => {
-              const roleAssignment = getMockedResource(
+              const roleAssignment = common.getMockedResource(
                 roleAssignmentResource,
                 auth.RoleAssignment,
               );
@@ -174,15 +174,6 @@ const performTestAsync = async (
   }
 };
 
-export interface Observer {
-  error(error: unknown): void;
-  complete(): void;
-}
-
-type ArgsOutputNoOptional<TArgs> = {
-  [P in keyof TArgs]-?: pulumi.Output<TArgs[P]>;
-};
-
 type AllOptional<TArgs, TMandatoryKey extends keyof TArgs = never> = {
   [P in TMandatoryKey]: TArgs[P];
 } &
@@ -206,7 +197,9 @@ const RecordTypeProperties = {
 } as const;
 
 // This extracts all records of all record types from single record set, handling all the complexity of those being behing pulumi.Output
-const getAllRecords = (recordSet: ArgsOutputNoOptional<nw.RecordSetArgs>) => {
+const getAllRecords = (
+  recordSet: common.ArgsOutputNoOptional<nw.RecordSetArgs>,
+) => {
   return pulumi
     .all(
       Object.keys(input.RecordType)
@@ -245,22 +238,4 @@ const getAllRecords = (recordSet: ArgsOutputNoOptional<nw.RecordSetArgs>) => {
           recordEntry: rEntry,
         }));
     });
-};
-
-const getMockedResource = <
-  T extends pulumi.CustomResource,
-  TParameters extends Array<unknown>,
->(
-  resource: T,
-  resourceConstructor: { new (...args: TParameters): T },
-) => {
-  // Our mock implementation in beforeTests.ts simply assigns inputs as outputs,
-  // therefore we can just switch the type of resource passed to this method.
-
-  // The underlying problem is that Pulumi-backed resource has differently-named properties than its inputs.
-  // However, during unit-tests and mocking stage, we must either simulate corresponding behaviour (requiring rename-knowledge of all properties of all resources).
-  // Or just use input-named properties in mocks, and provide this small trick to bypass typing.
-  return resource as unknown as ArgsOutputNoOptional<
-    ConstructorParameters<typeof resourceConstructor>[1]
-  >;
 };

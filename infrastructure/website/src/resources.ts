@@ -8,17 +8,20 @@ import * as input from "./input";
 import * as https from "./cdn-https";
 import * as naming from "./naming";
 
-const pulumiProgram = async ({
-  organization,
-  environment,
-  domainNames,
-  ...config
-}: input.Configuration) => {
-  const resourceID = "website";
-  // Create RG
-  const { name: resourceGroupName, location } =
-    await resources.getResourceGroup(config);
+const pulumiProgram = async (config: input.Configuration) =>
+  pulumiResources({ config, rg: await resources.getResourceGroup(config) });
 
+export interface ResourcesConfiguration {
+  config: Omit<input.Configuration, "resourceGroupName">;
+  rg: Pick<resources.GetResourceGroupResult, "name" | "location">;
+}
+
+// We export this for unit tests, and also do not use resources.getResourceGroup here, as mocking that is not as simple as mocking Pulumi resources
+export const pulumiResources = ({
+  config: { organization, environment, domainNames },
+  rg: { name: resourceGroupName, location },
+}: ResourcesConfiguration) => {
+  const resourceID = "website";
   // SA for hosting site files (.html and .js/.css)
   const sa = new storage.StorageAccount(resourceID, {
     resourceGroupName,
