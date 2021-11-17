@@ -36,7 +36,7 @@ test("Resources created by code match the input configuration", (c) => {
           dnsZoneContributorSPIDs: ["dummy-id"],
           roleDefinitionId,
         },
-        // Then test with actual config (in config/config.json folder)
+        // Then test with actual config (in ./config/ folder)
         async () => configFileToResourcesInput(await common.readConfigFile()),
       ]);
     },

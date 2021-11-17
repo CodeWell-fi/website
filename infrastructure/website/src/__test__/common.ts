@@ -30,8 +30,29 @@ export interface Observer {
   complete(): void;
 }
 
-export const readConfigFile = async () =>
+export const readConfigFile = async (envName: string) =>
   validation.decodeOrThrow(
     input.configuration.decode,
-    JSON.parse(await fs.readFile(`./config/config.json`, "utf8")),
+    JSON.parse(await fs.readFile(`./config/config-${envName}.json`, "utf8")),
   );
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export const pick = <T extends object, TNames extends Array<keyof T>>(
+  obj: T,
+  ...properties: TNames
+) =>
+  Object.fromEntries(
+    properties.map((property) => [property, obj[property]] as const),
+  ) as { [P in TNames[number]]: T[P] };
+
+export const pickFromMockedResource = <
+  TParameters extends Array<unknown>,
+  T extends pulumi.CustomResource,
+  TNames extends Array<
+    keyof ConstructorParameters<{ new (...args: TParameters): T }>[1]
+  >,
+>(
+  resource: T,
+  resourceConstructor: { new (...args: TParameters): T },
+  ...properties: TNames
+) => pick(getMockedResource(resource, resourceConstructor), ...properties);
