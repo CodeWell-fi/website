@@ -65,9 +65,9 @@ const deploy = async (
     blobs,
   });
 
-  const uploadBlobPaths = new Set(blobs.map(({ blobPath }) => blobPath));
-  const blobsToDelete = blobNames.filter(
-    (existingBlobName) => !uploadBlobPaths.has(existingBlobName),
+  const blobsToDelete = getBlobsToDelete(
+    blobNames,
+    blobs.map(({ blobPath }) => blobPath),
   );
 
   if (blobsToDelete.length > 0) {
@@ -91,10 +91,9 @@ const deploy = async (
   const contentPaths = ["/*"];
   const cdnPurgeEvent = { contentPaths: [...contentPaths] };
   eventEmitter.emit("cdnPurgeStarting", cdnPurgeEvent);
-  let purgeSuccess = false;
-  await Promise.race([
-    (async () => {
-      await new cdn.CdnManagementClient(
+  const purgeSuccess = await doWithPeriodicProgressReport(
+    () =>
+      new cdn.CdnManagementClient(
         credentials,
         cdnEndpoint.subscriptionId,
       ).endpoints.purgeContent(
@@ -102,11 +101,15 @@ const deploy = async (
         cdnEndpoint.profileName,
         cdnEndpoint.endpointName,
         contentPaths,
-      );
-      purgeSuccess = true;
-    })(),
-    notifyProgress(eventEmitter, cdnPurgeEvent, () => purgeSuccess),
-  ]);
+      ),
+    1000,
+    (elapsedMS) => {
+      const elapsedS = elapsedMS / 1000;
+      if (elapsedS > 0) {
+        eventEmitter.emit("cdnPurgeProgress", { ...cdnPurgeEvent, elapsedS });
+      }
+    },
+  );
   eventEmitter.emit("cdnPurgeCompleted", { ...cdnPurgeEvent, purgeSuccess });
 };
 
@@ -128,16 +131,36 @@ async function* getFilesRecursively(
   }
 }
 
-const notifyProgress = async (
-  eventEmitter: events.WebsiteDeployEventEimtter,
-  cdnPurgeEvent: events.VirtualWebsiteDeployEvents["cdnPurgeStarting"],
-  purgeDone: () => boolean,
+const getBlobsToDelete = (
+  existingBlobs: ReadonlyArray<string>,
+  newBlobs: ReadonlyArray<string>,
 ) => {
-  const iteration = 0;
-  while (!purgeDone()) {
-    eventEmitter.emit("cdnPurgeProgress", { ...cdnPurgeEvent, iteration });
-    await common.sleep(1000);
-  }
+  const newBlobsSet = new Set(newBlobs);
+  return existingBlobs.filter(
+    (existingBlobName) => !newBlobsSet.has(existingBlobName),
+  );
+};
+
+const doWithPeriodicProgressReport = async (
+  action: () => Promise<unknown>,
+  progressTickMS: number,
+  onProgress: (elapsedMS: number) => void,
+) => {
+  let actionCompletedSuccessfully = false;
+  const now = new Date().valueOf();
+  await Promise.race([
+    (async () => {
+      await action();
+      actionCompletedSuccessfully = true;
+    })(),
+    (async () => {
+      while (actionCompletedSuccessfully) {
+        onProgress(new Date().valueOf() - now);
+        await common.sleep(progressTickMS);
+      }
+    })(),
+  ]);
+  return actionCompletedSuccessfully;
 };
 
 export default deploy;

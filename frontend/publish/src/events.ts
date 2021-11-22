@@ -15,7 +15,7 @@ export interface VirtualWebsiteDeployEvents {
     contentPaths: ReadonlyArray<string>;
   };
   cdnPurgeProgress: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
-    iteration: number;
+    elapsedS: number;
   };
   cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
     purgeSuccess: boolean;
@@ -61,8 +61,8 @@ export const consoleLoggingRunEventEmitterBuilder = (
     logger("Starting Azure CDN endpoint purge"),
   );
   builder.addEventListener("cdnPurgeProgress", (arg) => {
-    if (arg.iteration % 10 === 0) {
-      logger(`Waiting for Azure CDN endpoint purge... (~${arg.iteration}s)`);
+    if (arg.elapsedS % 10 === 0) {
+      logger(`Waiting for Azure CDN endpoint purge... (~${arg.elapsedS}s)`);
     }
   });
   builder.addEventListener("cdnPurgeCompleted", (arg) =>
