@@ -42,12 +42,11 @@ const main = async () => {
       ),
     );
   // 1. Create credentials
-  let certPath: string | undefined;
   let credentials: id.TokenCredential;
   switch (auth.type) {
     case "sp":
       {
-        certPath = `${await fs.mkdtemp(
+        const certPath = `${await fs.mkdtemp(
           `${os.tmpdir()}/website-deploy`,
         )}/cert.pem`;
         await fs.writeFile(certPath, `${auth.keyPEM}${auth.certPEM}`);
@@ -56,36 +55,31 @@ const main = async () => {
           auth.clientId,
           certPath,
         );
+        await fs.rm(certPath);
       }
       break;
     case "msi":
       credentials = new id.ManagedIdentityCredential(auth.clientId);
       break;
   }
-  try {
-    await deploy(
-      events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
-      {
-        credentials,
-        websiteContainer: {
-          containerURL: `https://${naming.getStorageAccountName(
-            organization,
-            environment,
-          )}.blob.core.windows.net/$web`,
-          webpageDir: path.normalize(`${process.cwd()}/../code/build`),
-        },
-        cdnEndpoint: {
-          subscriptionId: azure.subscriptionId,
-          resourceGroupName,
-          ...naming.getCDNEndpointNames(organization, environment),
-        },
+  await deploy(
+    events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
+    {
+      credentials,
+      websiteContainer: {
+        containerURL: `https://${naming.getStorageAccountName(
+          organization,
+          environment,
+        )}.blob.core.windows.net/$web`,
+        webpageDir: path.normalize(`${process.cwd()}/../code/build`),
       },
-    );
-  } finally {
-    if (certPath) {
-      await fs.rm(certPath);
-    }
-  }
+      cdnEndpoint: {
+        subscriptionId: azure.subscriptionId,
+        resourceGroupName,
+        ...naming.getCDNEndpointNames(organization, environment),
+      },
+    },
+  );
 };
 
 void (async () => {

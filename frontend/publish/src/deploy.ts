@@ -131,17 +131,17 @@ async function* getFilesRecursively(
   }
 }
 
-const getBlobsToDelete = (
+export const getBlobsToDelete = (
   existingBlobs: ReadonlyArray<string>,
-  newBlobs: ReadonlyArray<string>,
+  uploadedBlobs: ReadonlyArray<string>,
 ) => {
-  const newBlobsSet = new Set(newBlobs);
+  const newBlobsSet = new Set(uploadedBlobs);
   return existingBlobs.filter(
     (existingBlobName) => !newBlobsSet.has(existingBlobName),
   );
 };
 
-const doWithPeriodicProgressReport = async (
+export const doWithPeriodicProgressReport = async (
   action: () => Promise<unknown>,
   progressTickMS: number,
   onProgress: (elapsedMS: number) => void,
@@ -154,7 +154,7 @@ const doWithPeriodicProgressReport = async (
       actionCompletedSuccessfully = true;
     })(),
     (async () => {
-      while (actionCompletedSuccessfully) {
+      while (!actionCompletedSuccessfully) {
         onProgress(new Date().valueOf() - now);
         await common.sleep(progressTickMS);
       }
