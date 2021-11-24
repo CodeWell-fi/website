@@ -1,0 +1,30 @@
+# adding Flags to your `layout` configuration to show up in the PR comment
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false  
+  require_base: yes
+  require_head: yes       
+  branches: null
+ignore:
+  - '**/*.spec.ts'
+  - '**/__test__/*'
+
+flag_management:
+  # this section will govern all default rules of Flags
+  default_rules:
+    statuses:
+      - name_prefix: project-
+        type: project
+        target: auto
+        threshold: 1%
+      - name_prefix: patch-
+        type: patch
+        target: auto
+        threshold: 1%
+# coverage:
+#   status:
+#     # pull-requests only
+#     patch:
+#       default:
+#         threshold: 1%

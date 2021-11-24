@@ -42,6 +42,7 @@ jobs:
           echo 'Reacting to Github event ${{ github.event_name }}.'
           npm ci --ignore-scripts
           npm run build
+          npm run test
 
           # If we don't set NODE_PATH, we will get errors like
           # Error: Cannot find module '@pulumi/pulumi/cmd/dynamic-provider'
@@ -92,6 +93,10 @@ jobs:
           else
             echo 'Not reacting to push event, so not proceeding to deploy stage'
           fi
+      - uses: codecov/codecov-action@v1
+        with:
+          flags: infrastructure-dns
+          directory: infrastructure/dns
 
   run_infrastructure_pipeline_pulumi_up:
     name: Perform infrastructure changes
@@ -112,7 +117,7 @@ jobs:
           set -e
 
           npm ci --ignore-scripts
-          npm run build
+          npm run tsc
 
           # Disable creation of output file by setting it to empty string
           export WEBSITE_INFRA_CONFIG="$(cat config/config.json)"

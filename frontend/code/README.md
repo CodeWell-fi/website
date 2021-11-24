@@ -1,9 +1,19 @@
-# Package.json
-## Resolutions
+# Website UI Source Code
+The website is written with [TypeScript](https://www.typescriptlang.org/) language and uses [React](https://reactjs.org/) framework to render the webpage in browser.
+Furthermore, the [MUI library](https://mui.com) is used to minimize direct manipulation of <abbr title="HyperText Markup Language">HTML</abbr> elements.
+
+# Resolutions field in package.json
 - The `eslint` package is locked to specific version to override CRA's version. With CRA's version, there will be an error: `Error while loading rule 'prettier/prettier': context.getPhysicalFilename is not a function`, and there is [solution explanation online](https://charles-stover.medium.com/resolving-prettier-react-context-getphysicalfilename-is-not-a-function-52a250f68291).
 
-# Getting Started with Create React App
+# Code structure
+The code directly in `src` folder defines base structure of the web page: header, footer, content navigation, and content articles.
+Content navigation component is in `src/ScrollTabs` folder, while the content articles are in `src/sections` folder.
+The `src/common` folder contains some shared code utilized in several places.
 
+Some folders contain `__test__` subfolder, containing unit tests for the files in that folder.
+Finally, the `src/test-utils` folder contains code shared by multiple unit tests.
+
+# Getting Started with Create React App
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

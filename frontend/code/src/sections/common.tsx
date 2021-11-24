@@ -1,6 +1,6 @@
 import { Typography, Box } from "@mui/material";
-
-type Variant = import("@mui/material/styles/createTypography").Variant;
+import type { Variant } from "@mui/material/styles/createTypography";
+import type { SxProps } from "@mui/system";
 
 export type Lines = ReadonlyArray<
   | string
@@ -16,7 +16,7 @@ export type Lines = ReadonlyArray<
 
 export interface RenderLineOptionalProps {
   variant: Variant;
-  sx: import("@mui/system").SxProps;
+  sx: SxProps;
 }
 
 export const DEFAULT_OPTIONAL_PROPS: RenderLineOptionalProps = {
@@ -28,88 +28,6 @@ export const DEFAULT_OPTIONAL_PROPS: RenderLineOptionalProps = {
     // textAlign: "center",
   },
 };
-// const fragmentDisplay = "inline-block";
-
-// export const renderLines = (
-//   lines: Lines,
-//   optionalProps?: RenderLineOptionalProps,
-// ) => {
-//   const opts = optionalProps ?? DEFAULT_OPTIONAL_PROPS;
-//   const { variant, sx } = opts;
-//   const fragmentOpts = { ...opts, sx: { ...sx, display: fragmentDisplay } };
-//   return (
-//     <>
-//       {lines.flatMap((lineOrFragments, lineIdx) =>
-//         typeof lineOrFragments === "string" ? (
-//           <Typography variant={variant} key={lineIdx} sx={sx}>
-//             {lineOrFragments}
-//           </Typography>
-//         ) : (
-//           <Box
-//             key={lineIdx}
-//             sx={{
-//               display: "flex",
-//               flexWrap: "wrap",
-//             }}
-//           >
-//             {lineOrFragments.map((lineOrComponent, fragmentIndex) =>
-//               typeof lineOrComponent === "string" ? (
-//                 <Typography
-//                   variant={variant}
-//                   key={`${lineIdx}-${fragmentIndex}`}
-//                   sx={{
-//                     ...sx,
-//                     display: fragmentDisplay,
-//                   }}
-//                 >
-//                   {lineOrComponent}
-//                 </Typography>
-//               ) : (
-//                 lineOrComponent(lineIdx, fragmentIndex, fragmentOpts)
-//               ),
-//             )}
-//           </Box>
-//         ),
-//       )}
-//     </>
-//   );
-// };
-
-// export const renderLines2 = (
-//   lines: Lines,
-//   optionalProps?: RenderLineOptionalProps,
-// ) => {
-//   const opts = optionalProps ?? DEFAULT_OPTIONAL_PROPS;
-//   const { variant, sx } = opts;
-//   const fragmentOpts = { ...opts, sx: { ...sx, display: fragmentDisplay } };
-//   return (
-//     <>
-//       {lines.flatMap((lineOrFragments, lineIdx) =>
-//         typeof lineOrFragments === "string" ? (
-//           <Typography variant={variant} key={lineIdx} sx={sx}>
-//             {lineOrFragments}
-//           </Typography>
-//         ) : (
-//           <Typography
-//             variant={variant}
-//             key={lineIdx}
-//             sx={{
-//               ...sx,
-//               display: "flex",
-//               flexWrap: "wrap",
-//             }}
-//           >
-//             {lineOrFragments.map((lineOrComponent, fragmentIndex) =>
-//               typeof lineOrComponent === "string"
-//                 ? lineOrComponent
-//                 : lineOrComponent(lineIdx, fragmentIndex, fragmentOpts),
-//             )}
-//           </Typography>
-//         ),
-//       )}
-//     </>
-//   );
-// };
 
 export const renderLines = (
   lines: Lines,

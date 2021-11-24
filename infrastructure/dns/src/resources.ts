@@ -10,18 +10,64 @@ const pulumiProgram = async ({
   dnsZoneContributorSPNames,
   ...config
 }: input.Configuration) => {
-  const rg = await resources.getResourceGroup({
-    resourceGroupName: config.resourceGroupName,
-  });
+  return pulumiResources({
+    rgName: (
+      await resources.getResourceGroup({
+        resourceGroupName: config.resourceGroupName,
+      })
+    ).name,
+    additionalRecords,
+    dnsZoneContributorSPIDs: await Promise.all(
+      dnsZoneContributorSPNames.map(async (displayName) => ({
+        displayName,
+        principalId: (
+          await ad.getServicePrincipal({
+            displayName,
+          })
+        ).id,
+      })),
+    ),
+    dnsZoneName,
+    roleDefinitionId: (
+      await authorization.getRoleDefinition({
+        // From https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+        roleDefinitionId: "befefa01-2a29-4197-83a8-272ff33ce314", // "DNS Zone Contributor",
+        scope: `/subscriptions/${
+          (
+            await authorization.getClientConfig()
+          ).subscriptionId
+        }`,
+      })
+    ).id,
+  }).zone.nameServers;
+};
+
+// Using azure/ad.getXYZ methods doesn't work easily in unit tests, so we hoist them upwards and for unit tests, expose just the code which does the actual resource management.
+export interface ResourcesConfiguration {
+  rgName: string;
+  roleDefinitionId: string;
+  dnsZoneContributorSPIDs: ReadonlyArray<
+    string | { displayName: string; principalId: string }
+  >;
+  dnsZoneName: input.Configuration["dnsZoneName"];
+  additionalRecords: input.Configuration["additionalRecords"];
+}
+export const pulumiResources = ({
+  rgName,
+  roleDefinitionId,
+  dnsZoneContributorSPIDs,
+  dnsZoneName,
+  additionalRecords,
+}: ResourcesConfiguration) => {
   const zone = new nw.Zone("dns", {
-    resourceGroupName: rg.name,
+    resourceGroupName: rgName,
     zoneName: dnsZoneName,
     zoneType: "Public",
     location: "global",
   });
-  additionalRecords.map((record) => {
+  const records = additionalRecords.map((record) => {
     const commonProps = {
-      resourceGroupName: rg.name,
+      resourceGroupName: rgName,
       zoneName: zone.name,
       relativeRecordSetName: record.relativeName,
       recordType: record.type,
@@ -52,9 +98,7 @@ const pulumiProgram = async ({
           ...commonProps,
           caaRecords: [
             {
-              flags: record.flags,
-              value: record.value,
-              tag: record.tag,
+              ...record,
             },
           ],
         });
@@ -62,7 +106,7 @@ const pulumiProgram = async ({
         return new nw.RecordSet(recordSetID, {
           ...commonProps,
           cnameRecord: {
-            cname: record.cname,
+            ...record,
           },
         });
       case input.RecordType.MX:
@@ -70,8 +114,7 @@ const pulumiProgram = async ({
           ...commonProps,
           mxRecords: [
             {
-              exchange: record.exchange,
-              preference: record.preference,
+              ...record,
             },
           ],
         });
@@ -80,7 +123,7 @@ const pulumiProgram = async ({
           ...commonProps,
           nsRecords: [
             {
-              nsdname: record.nsdname,
+              ...record,
             },
           ],
         });
@@ -89,7 +132,7 @@ const pulumiProgram = async ({
           ...commonProps,
           ptrRecords: [
             {
-              ptrdname: record.ptrdname,
+              ...record,
             },
           ],
         });
@@ -114,41 +157,38 @@ const pulumiProgram = async ({
           ...commonProps,
           txtRecords: [
             {
-              value: record.value,
+              ...record,
             },
           ],
         });
     }
   });
 
-  const roleDefinitionId = (
-    await authorization.getRoleDefinition({
-      // From https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-      roleDefinitionId: "befefa01-2a29-4197-83a8-272ff33ce314", // "DNS Zone Contributor",
-      scope: `/subscriptions/${
-        (
-          await authorization.getClientConfig()
-        ).subscriptionId
-      }`,
-    })
-  ).id;
-  await Promise.all(
-    dnsZoneContributorSPNames.map(
-      async (spName) =>
-        new authorization.RoleAssignment(`dns-zone-contributor-${spName}`, {
+  const roleAssignments = dnsZoneContributorSPIDs.map(
+    (principalIdOrInfo) =>
+      new authorization.RoleAssignment(
+        `dns-zone-contributor-${
+          typeof principalIdOrInfo === "string"
+            ? principalIdOrInfo
+            : principalIdOrInfo.displayName
+        }`,
+        {
           scope: zone.id,
-          principalId: (
-            await ad.getServicePrincipal({
-              displayName: spName,
-            })
-          ).id,
+          principalId:
+            typeof principalIdOrInfo === "string"
+              ? principalIdOrInfo
+              : principalIdOrInfo.principalId,
           roleDefinitionId,
           principalType: "ServicePrincipal",
-        }),
-    ),
+        },
+      ),
   );
 
-  return zone.nameServers;
+  return {
+    zone,
+    records,
+    roleAssignments,
+  };
 };
 
 export default pulumiProgram;

@@ -11,10 +11,6 @@ export const NavBar = ({ items }: NavBarProps) => {
   const unsetClickedRef = useRef<number | null>(null);
   const [active, setActive] = useScrollSpy(items, clickedRef);
 
-  const tabsHTML = items.map(({ label, hash }, index) => (
-    <Tab value={hash} key={index} label={label} aria-controls={hash} />
-  ));
-
   useEffect(
     () => () => {
       if (unsetClickedRef.current) {
@@ -52,7 +48,9 @@ export const NavBar = ({ items }: NavBarProps) => {
         }
       }}
     >
-      {tabsHTML}
+      {items.map(({ label, hash }, index) => (
+        <Tab value={hash} key={index} label={label} aria-controls={hash} />
+      ))}
     </Tabs>
   );
 };

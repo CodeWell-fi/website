@@ -1,4 +1,11 @@
-import { Container, Box, Link, useTheme, Typography } from "@mui/material";
+import {
+  Container,
+  Box,
+  Link,
+  useTheme,
+  Typography,
+  Tooltip,
+} from "@mui/material";
 import { SxProps } from "@mui/system";
 
 export interface FooterProps {
@@ -90,14 +97,16 @@ const Footer = ({ label, githubLink }: FooterProps) => {
           <Typography {...typographyProps}>
             Made with Azure, Pulumi, React, and lots of&nbsp;
           </Typography>
-          <Typography // eslint-disable-line jsx-a11y/accessible-emoji
-            component="span"
-            role="img"
-            aria-label="tea"
-            {...typographyProps}
-          >
-            🍵
-          </Typography>
+          <Tooltip title="cup of tea" arrow>
+            <Typography // eslint-disable-line jsx-a11y/accessible-emoji
+              component="span"
+              role="img"
+              aria-label="tea"
+              {...typographyProps}
+            >
+              🍵
+            </Typography>
+          </Tooltip>
         </Box>
       </Container>
     </Container>

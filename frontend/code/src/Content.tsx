@@ -10,7 +10,7 @@ import { NavBar } from "./ScrollTabs";
 import { SxProps } from "@mui/system";
 import * as common from "./common";
 
-interface MainProps {
+export interface ContentProps {
   tabGroupUniqueName: string;
   sections: ReadonlyArray<{
     label: ReactNode;
@@ -19,7 +19,11 @@ interface MainProps {
   header: ReactElement;
 }
 
-const Content = ({ tabGroupUniqueName, sections: tabs, header }: MainProps) => {
+const Content = ({
+  tabGroupUniqueName,
+  sections: tabs,
+  header,
+}: ContentProps) => {
   const getID = (idx: number) => `tab-${tabGroupUniqueName}-${idx}`;
   const theme = useTheme();
   const [contentHeigth, setContentHeigth] = useState<number>(0);

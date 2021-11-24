@@ -1,5 +1,5 @@
 {
+  "resourceGroupName": "codewell-dev-managed-site",
   "organization": "codewell",
-  "environment": "dev",
-  "resourceGroupName": "codewell-dev-managed-site"
+  "environment": "dev"
 }
