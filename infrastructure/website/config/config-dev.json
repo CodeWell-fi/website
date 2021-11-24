@@ -2,14 +2,14 @@
   "resourceGroupName": "codewell-dev-managed-site",
   "organization": "codewell",
   "environment": "dev",
-  "domainNames": [
-    {
+  "domainNames": {
+    "main": {
       "zone": {
         "resourceGroupName": "codewell-dns-managed-site",
         "zoneName": "codewell.fi"
       },
       "relativeName": "dev"
     }
-  ],
+  },
   "httpsEnabled": true
 }

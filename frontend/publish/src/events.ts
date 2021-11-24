@@ -61,7 +61,7 @@ export const consoleLoggingRunEventEmitterBuilder = (
     logger("Starting Azure CDN endpoint purge"),
   );
   builder.addEventListener("cdnPurgeProgress", (arg) => {
-    if (arg.elapsedS % 10 === 0) {
+    if (Math.trunc(arg.elapsedS) % 10 === 0) {
       logger(`Waiting for Azure CDN endpoint purge... (~${arg.elapsedS}s)`);
     }
   });

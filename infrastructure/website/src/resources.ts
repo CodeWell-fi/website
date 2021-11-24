@@ -228,3 +228,17 @@ export const deliveryPolicy: pulumi.Unwrap<azureInputs.cdn.EndpointPropertiesUpd
       },
     ],
   };
+
+const convertToArrayWithUniformItems = (
+  endpoints: input.Configuration["endpoints"],
+) => {
+  (Array.isArray(endpoints) ? endpoints : [endpoints]).flatMap((item) => {
+    const result =
+      Array.isArray(item) || typeof item === "string"
+        ? (Array.isArray(item) ? item : [item]).map((dnsName) => ({
+            zone: undefined,
+            dnsName,
+          }))
+        : Object.entries(item.records);
+  });
+};
