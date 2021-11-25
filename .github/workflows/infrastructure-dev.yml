@@ -1,3 +1,9 @@
+# TODO generalize this and use with prod.
+# Options:
+# 1. Reusable workflow - https://docs.github.com/en/actions/learn-github-actions/reusing-workflows
+# 2. Templates - https://docs.github.com/en/actions/learn-github-actions/creating-workflow-templates
+# 3. Include step - https://github.com/mithro/actions-includes
+
 name: Infrastructure Website Pipeline - DEV
 on:
   push:
