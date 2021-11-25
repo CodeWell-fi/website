@@ -3,7 +3,7 @@ import * as fs from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 import * as validation from "@data-heaving/common-validation";
-import * as id from "@azure/identity";
+import * as identity from "@azure/identity";
 import * as config from "./config";
 import * as naming from "./naming";
 import * as events from "./events";
@@ -31,7 +31,7 @@ const main = async () => {
       throw new Error("The supplied Azure pipeline configuration was invalid");
     },
   );
-  const { organization, environment, resourceGroupName } =
+  const { organization, environment, resourceGroupName, ids } =
     validation.decodeOrThrow(
       config.infraConfig.decode,
       JSON.parse(
@@ -42,7 +42,7 @@ const main = async () => {
       ),
     );
   // 1. Create credentials
-  let credentials: id.TokenCredential;
+  let credentials: identity.TokenCredential;
   switch (auth.type) {
     case "sp":
       {
@@ -50,7 +50,7 @@ const main = async () => {
           `${os.tmpdir()}/website-deploy`,
         )}/cert.pem`;
         await fs.writeFile(certPath, `${auth.keyPEM}${auth.certPEM}`);
-        credentials = new id.ClientCertificateCredential(
+        credentials = new identity.ClientCertificateCredential(
           azure.tenantId,
           auth.clientId,
           certPath,
@@ -59,9 +59,10 @@ const main = async () => {
       }
       break;
     case "msi":
-      credentials = new id.ManagedIdentityCredential(auth.clientId);
+      credentials = new identity.ManagedIdentityCredential(auth.clientId);
       break;
   }
+  const id = pickSuitableID(ids);
   await deploy(
     events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
     {
@@ -70,16 +71,30 @@ const main = async () => {
         containerURL: `https://${naming.getStorageAccountName(
           organization,
           environment,
+          id,
         )}.blob.core.windows.net/$web`,
         webpageDir: path.normalize(`${process.cwd()}/../code/build`),
       },
       cdnEndpoint: {
         subscriptionId: azure.subscriptionId,
         resourceGroupName,
-        ...naming.getCDNEndpointNames(organization, environment),
+        profileName: naming.getCDNProfileName(organization, environment),
+        endpointName: naming.getCDNProfileEndpointName(
+          organization,
+          environment,
+          id,
+        ),
       },
     },
   );
+};
+
+const pickSuitableID = (ids: string | Array<string>) => {
+  if (Array.isArray(ids)) {
+    throw new Error("Not implemented yet.");
+  } else {
+    return ids;
+  }
 };
 
 void (async () => {
