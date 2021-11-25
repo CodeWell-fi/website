@@ -2,5 +2,5 @@
   "resourceGroupName": "codewell-dev-managed-site",
   "organization": "codewell",
   "environment": "dev",
-  "ids": "main"
+  "endpoints": "main"
 }

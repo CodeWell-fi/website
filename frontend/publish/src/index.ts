@@ -31,7 +31,7 @@ const main = async () => {
       throw new Error("The supplied Azure pipeline configuration was invalid");
     },
   );
-  const { organization, environment, resourceGroupName, ids } =
+  const { organization, environment, resourceGroupName, endpoints } =
     validation.decodeOrThrow(
       config.infraConfig.decode,
       JSON.parse(
@@ -62,7 +62,7 @@ const main = async () => {
       credentials = new identity.ManagedIdentityCredential(auth.clientId);
       break;
   }
-  const id = pickSuitableID(ids);
+  const id = pickSuitableID(endpoints);
   await deploy(
     events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
     {
@@ -91,6 +91,7 @@ const main = async () => {
 
 const pickSuitableID = (ids: string | Array<string>) => {
   if (Array.isArray(ids)) {
+    // TODO: list git tags, and pick the next ID.
     throw new Error("Not implemented yet.");
   } else {
     return ids;

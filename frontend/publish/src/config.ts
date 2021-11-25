@@ -40,7 +40,7 @@ export const infraConfig = t.type(
     organization: validation.nonEmptyString,
     environment: validation.nonEmptyString,
     resourceGroupName: validation.nonEmptyString,
-    ids: t.union([
+    endpoints: t.union([
       validation.nonEmptyString,
       t.array(validation.nonEmptyString),
     ]),
