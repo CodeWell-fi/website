@@ -20,6 +20,7 @@ const makeRecordsDictionary = <T extends t.Mixed>(valueType: T) =>
 const cdnEndpointSpecification = t.union(
   [
     // When no Azure-managed zone to join to
+    validation.nonEmptyString,
     t.array(validation.nonEmptyString, "UnmanagedDNSNamesArray"),
     // When joining to Azure-managed DNS zone
     t.union(

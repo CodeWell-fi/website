@@ -1,13 +1,15 @@
 // Note: this file will get copied to website-cd/src folder by CD pipeline
+export const getCDNProfileName = (organization: string, environment: string) =>
+  `${organization}-${environment}`;
+
 export const getStorageAccountName = (
   organization: string,
   environment: string,
-) => `${organization}${environment}site`;
+  id: string,
+) => `${organization}${environment}site${id}`;
 
-export const getCDNEndpointNames = (
+export const getCDNProfileEndpointName = (
   organization: string,
   environment: string,
-) => ({
-  profileName: `${organization}-${environment}`,
-  endpointName: `${organization}-${environment}`,
-});
+  id: string,
+) => `${organization}-${environment}-${id}`;

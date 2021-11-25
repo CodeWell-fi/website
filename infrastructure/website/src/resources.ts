@@ -14,10 +14,17 @@ const pulumiProgram = async (config: input.Configuration) =>
   pulumiResources({
     config,
     rg: await resources.getResourceGroup(config),
-  }).records.map(({ hostName, domain: { customHttpsProvisioningState } }) => ({
-    hostName,
-    httpsState: customHttpsProvisioningState,
-  }));
+  }).endpoints.map(
+    ({
+      record: {
+        hostName,
+        domain: { customHttpsProvisioningState },
+      },
+    }) => ({
+      hostName,
+      httpsState: customHttpsProvisioningState,
+    }),
+  );
 
 export interface ResourcesConfiguration {
   config: Omit<input.Configuration, "resourceGroupName">;
@@ -26,161 +33,162 @@ export interface ResourcesConfiguration {
 
 // We export this for unit tests, and also do not use resources.getResourceGroup here, as mocking that is not as simple as mocking Pulumi resources
 export const pulumiResources = ({
-  config: { organization, environment, domainNames },
+  config: { organization, environment, endpoints },
   rg: { name: resourceGroupName, location },
 }: ResourcesConfiguration) => {
-  const resourceID = "website";
+  const topLevelResourceID = "website";
 
   // CDN profile
-  const { profileName, endpointName } = naming.getCDNEndpointNames(
-    organization,
-    environment,
-  );
-  const profile = new cdn.Profile(resourceID, {
+  const profile = new cdn.Profile(topLevelResourceID, {
     resourceGroupName,
-    profileName,
+    profileName: naming.getCDNProfileName(organization, environment),
     location,
     sku: {
       name: cdn.SkuName.Standard_Microsoft, // Notice: Message="Akamai and Verizon CDN profiles cannot be created with a trial account."
     },
   });
 
-  // SA for hosting site files (.html and .js/.css)
-  const sa = new storage.StorageAccount(resourceID, {
-    resourceGroupName,
-    accountName: naming.getStorageAccountName(organization, environment),
-    sku: {
-      name: storage.SkuName.Standard_RAGRS,
-    },
-    location,
-    kind: storage.Kind.StorageV2,
-    enableHttpsTrafficOnly: true, // We will handle http -> https redirect in CDN profile
-    accessTier: storage.AccessTier.Hot,
-    allowBlobPublicAccess: true, // This will be hosting website, so has to be public
-    allowSharedKeyAccess: true, // Nothing like ARM_STORAGE_USE_AZUREAD in azure-native provider yet, so we must still use this
-    minimumTlsVersion: storageTypes.MinimumTlsVersion.TLS1_2,
-  });
-  const blobServiceProperties = new storage.BlobServiceProperties(resourceID, {
-    resourceGroupName,
-    accountName: sa.name,
-    blobServicesName: "default",
-    isVersioningEnabled: false,
-    cors: {
-      corsRules: [],
-    },
-    deleteRetentionPolicy: {
-      enabled: false,
-    },
-  });
-  const staticWebsite = new storage.StorageAccountStaticWebsite(resourceID, {
-    resourceGroupName,
-    accountName: sa.name,
-    indexDocument: "index.html",
-    error404Document: "error404.html",
-  });
-
-  // Custom DNS setup
-  const endpointHost = sa.primaryEndpoints.web.apply((r) => new URL(r).host);
-  const endpoint = new cdn.Endpoint(resourceID, {
-    resourceGroupName,
-    profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
-    endpointName,
-    isHttpAllowed: true,
-    isHttpsAllowed: true,
-    isCompressionEnabled: true,
-    originHostHeader: endpointHost,
-    contentTypesToCompress,
-    origins: [
-      {
-        name: "cdn-origin",
-        hostName: endpointHost,
-        originHostHeader: endpointHost,
-        httpsPort: 443,
-        httpPort: 80,
-      },
-    ],
-    deliveryPolicy,
-  });
-  const defaultZone = Array.isArray(domainNames)
-    ? undefined
-    : domainNames.defaultZone;
-
-  const domainNameArray = Array.isArray(domainNames)
-    ? domainNames
-    : domainNames.domains;
-
   return {
-    sa,
-    blobServiceProperties,
-    staticWebsite,
     profile,
-    endpoint,
-    records: domainNameArray.map((domainName) => {
-      let hostName: string;
-      let recordSet: nw.RecordSet | undefined;
-      if (typeof domainName === "string" && !defaultZone) {
-        hostName = domainName;
-      } else {
-        const relativeName =
-          typeof domainName === "string" ? domainName : domainName.relativeName;
-        const zone =
-          typeof domainName === "string"
-            ? defaultZone ?? doThrow<input.ZoneInfo>("This should never happen")
-            : domainName.zone;
-        hostName = `${relativeName === "@" ? "" : `${relativeName}.`}${
-          zone.zoneName
-        }`;
-        recordSet = new nw.RecordSet(hostName, {
-          ...zone,
-          recordType: "CNAME",
-          relativeRecordSetName: relativeName,
-          ttl: 3600, // TODO make this customizable
-          cnameRecord: {
-            cname: endpoint.hostName,
-          },
-        });
-      }
+    endpoints: convertToArrayWithUniformItems(endpoints).map(
+      ({ id, zone, dnsName }) => {
+        const resourceID = `${topLevelResourceID}-${id}`;
 
-      const domainID = `${resourceID}-${hostName}`;
-      const domain = new cdn.CustomDomain(
-        domainID,
-        {
+        // SA for hosting site files (.html and .js/.css)
+        const sa = new storage.StorageAccount(resourceID, {
           resourceGroupName,
-          profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
-          endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
-          customDomainName: "website",
-          hostName,
-        },
-        {
-          dependsOn: recordSet,
-        },
-      );
+          accountName: naming.getStorageAccountName(
+            organization,
+            environment,
+            id,
+          ),
+          sku: {
+            name: storage.SkuName.Standard_RAGRS,
+          },
+          location,
+          kind: storage.Kind.StorageV2,
+          enableHttpsTrafficOnly: true, // We will handle http -> https redirect in CDN profile
+          accessTier: storage.AccessTier.Hot,
+          allowBlobPublicAccess: true, // This will be hosting website, so has to be public
+          allowSharedKeyAccess: true, // Nothing like ARM_STORAGE_USE_AZUREAD in azure-native provider yet, so we must still use this
+          minimumTlsVersion: storageTypes.MinimumTlsVersion.TLS1_2,
+        });
+        const blobServiceProperties = new storage.BlobServiceProperties(
+          resourceID,
+          {
+            resourceGroupName,
+            accountName: sa.name,
+            blobServicesName: "default",
+            isVersioningEnabled: false,
+            cors: {
+              corsRules: [],
+            },
+            deleteRetentionPolicy: {
+              enabled: false,
+            },
+          },
+        );
+        const staticWebsite = new storage.StorageAccountStaticWebsite(
+          resourceID,
+          {
+            resourceGroupName,
+            accountName: sa.name,
+            indexDocument: "index.html",
+            error404Document: "error404.html",
+          },
+        );
 
-      const httpsResource = new https.CDNCustomDomainHTTPSResource(
-        domainID,
-        {
-          domainID: domain.id,
-          httpsEnabled: true,
-        },
-        {
-          parent: domain,
-        },
-      );
-      return {
-        hostName,
-        recordSet,
-        domain,
-        httpsResource,
-      };
-    }),
+        // Custom DNS setup
+        const endpointHost = sa.primaryEndpoints.web.apply(
+          (r) => new URL(r).host,
+        );
+        const endpoint = new cdn.Endpoint(resourceID, {
+          resourceGroupName,
+          profileName: profile.name,
+          endpointName: naming.getCDNProfileEndpointName(
+            organization,
+            environment,
+            id,
+          ),
+          isHttpAllowed: true,
+          isHttpsAllowed: true,
+          isCompressionEnabled: true,
+          originHostHeader: endpointHost,
+          contentTypesToCompress,
+          origins: [
+            {
+              name: "cdn-origin",
+              hostName: endpointHost,
+              originHostHeader: endpointHost,
+              httpsPort: 443,
+              httpPort: 80,
+            },
+          ],
+          deliveryPolicy,
+        });
+
+        let hostName: string;
+        let recordSet: nw.RecordSet | undefined;
+        if (zone) {
+          hostName = `${dnsName === "@" ? "" : `${dnsName}.`}${zone.zoneName}`;
+          recordSet = new nw.RecordSet(hostName, {
+            ...zone,
+            recordType: "CNAME",
+            relativeRecordSetName: dnsName,
+            ttl: 3600, // TODO make this customizable
+            cnameRecord: {
+              cname: endpoint.hostName,
+            },
+          });
+        } else {
+          hostName = dnsName;
+        }
+
+        const domainID = `${resourceID}-${hostName}`;
+        const domain = new cdn.CustomDomain(
+          domainID,
+          {
+            resourceGroupName,
+            profileName: profile.name, // Use this instead of "profileName" so that we will tell Pulumi that endpoint depends on profile
+            endpointName: endpoint.name, // Use this instead of "endpointName" so that we will tell Pulumi that endpoint depends on endpoint
+            customDomainName: `website-${id}`,
+            hostName,
+          },
+          {
+            dependsOn: recordSet,
+          },
+        );
+
+        const httpsResource = new https.CDNCustomDomainHTTPSResource(
+          domainID,
+          {
+            domainID: domain.id,
+            httpsEnabled: true,
+          },
+          {
+            parent: domain,
+          },
+        );
+
+        return {
+          sa,
+          blobServiceProperties,
+          staticWebsite,
+          profile,
+          endpoint,
+          record: {
+            hostName,
+            recordSet,
+            domain,
+            httpsResource,
+          },
+        };
+      },
+    ),
   };
 };
 
 export default pulumiProgram;
-
-const doThrow = <T>(message: string): T => {
-  throw new Error(message);
-};
 
 export const contentTypesToCompress = [
   "text/plain",
@@ -229,16 +237,39 @@ export const deliveryPolicy: pulumi.Unwrap<azureInputs.cdn.EndpointPropertiesUpd
     ],
   };
 
-const convertToArrayWithUniformItems = (
+export const convertToArrayWithUniformItems = (
   endpoints: input.Configuration["endpoints"],
-) => {
+) =>
   (Array.isArray(endpoints) ? endpoints : [endpoints]).flatMap((item) => {
-    const result =
-      Array.isArray(item) || typeof item === "string"
-        ? (Array.isArray(item) ? item : [item]).map((dnsName) => ({
-            zone: undefined,
-            dnsName,
-          }))
-        : Object.entries(item.records);
+    let result: Array<{
+      id: string;
+      dnsName: string;
+      zone: input.ZoneInfo | undefined;
+    }>;
+    if (Array.isArray(item) || typeof item === "string") {
+      result = (Array.isArray(item) ? item : [item]).map((dnsName) => ({
+        id: dnsName,
+        zone: undefined,
+        dnsName,
+      }));
+    } else {
+      if ("zone" in item) {
+        const { zone } = item;
+        result = Object.entries(item.records).map(([id, dnsName]) => ({
+          id,
+          zone,
+          dnsName,
+        }));
+      } else {
+        result = Object.entries(item.records).map(
+          ([id, { zone, relativeName }]) => ({
+            id,
+            zone,
+            dnsName: relativeName,
+          }),
+        );
+      }
+    }
+
+    return result;
   });
-};

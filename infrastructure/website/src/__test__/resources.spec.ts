@@ -17,29 +17,44 @@ declare module "@pulumi/pulumi" {
   ): pulumi.Output<{ [P in keyof TRecord]: pulumi.Unwrap<TRecord[P]> }>;
 }
 
-test("Resources created by code match the input configuration", (c) => {
-  return {
+const testResources = test.macro(
+  (
+    c,
+    resourceSpec:
+      | spec.ResourcesConfiguration
+      | (() =>
+          | spec.ResourcesConfiguration
+          | Promise<spec.ResourcesConfiguration>),
+  ) => ({
     subscribe: (observer: common.Observer) => {
-      void performTestAsync(c, observer, [
-        // First test with very simple config
-        {
-          config: {
-            organization: "dummy",
-            environment: "dev",
-            domainNames: ["dummy"],
-          },
-          rg: {
-            name: "dummy",
-            location: "dummy",
-          },
-        },
-        // Then test with actual config (in ./config/ folder)
-        async () =>
-          configFileToResourcesInput(await common.readConfigFile("dev")),
-      ]);
+      void performTestAsync(c, observer, resourceSpec);
     },
-  };
+  }),
+);
+
+test("Simple configuration produces correct resources", testResources, {
+  config: {
+    organization: "dummy",
+    environment: "dev",
+    endpoints: "dummy",
+  },
+  rg: {
+    name: "dummy",
+    location: "dummy",
+  },
 });
+
+test(
+  "Development configuration produces correct resources",
+  testResources,
+  async () => configFileToResourcesInput(await common.readConfigFile("dev")),
+);
+
+test(
+  "Production configuration produces correct resources",
+  testResources,
+  async () => configFileToResourcesInput(await common.readConfigFile("prod")),
+);
 
 const configFileToResourcesInput = (
   config: input.Configuration,
@@ -54,75 +69,71 @@ const configFileToResourcesInput = (
 const performTestAsync = async (
   c: ExecutionContext,
   observer: common.Observer,
-  inputs: ReadonlyArray<
+  input:
     | spec.ResourcesConfiguration
-    | (() => spec.ResourcesConfiguration | Promise<spec.ResourcesConfiguration>)
-  >,
+    | (() =>
+        | spec.ResourcesConfiguration
+        | Promise<spec.ResourcesConfiguration>),
 ) => {
   try {
-    const inputObjects = await Promise.all(
-      inputs.map((config) => {
-        return typeof config === "function" ? config() : config;
-      }),
-    );
-    inputObjects.forEach((configObj) => {
-      const {
-        sa,
-        blobServiceProperties,
-        staticWebsite,
-        profile,
-        endpoint,
-        records,
-      } = spec.pulumiResources(configObj);
-      const { config, rg } = configObj;
-      pulumi
-        // If we pass pulumi resources as-is to pulumi.all, it won't process the outputs (for one reason or another).
-        .all({
-          sa: common.pickFromMockedResource(
+    const configObj = typeof input === "function" ? await input() : input;
+    const { profile, endpoints } = spec.pulumiResources(configObj);
+    const { config, rg } = configObj;
+    pulumi
+      // If we pass pulumi resources as-is to pulumi.all, it won't process the outputs (for one reason or another).
+      .all({
+        profile: common.pickFromMockedResource(
+          profile,
+          cdn.Profile,
+          "resourceGroupName",
+          "profileName",
+        ),
+        endpoints: endpoints.map(
+          ({
             sa,
-            storage.StorageAccount,
-            "accountName",
-            "allowBlobPublicAccess",
-            "enableHttpsTrafficOnly",
-            "minimumTlsVersion",
-            "networkRuleSet",
-            "resourceGroupName",
-          ),
-          endpointHost: sa.primaryEndpoints.web.apply(
-            (url) => new URL(url).host,
-          ),
-          blobServiceProperties: common.pickFromMockedResource(
             blobServiceProperties,
-            storage.BlobServiceProperties,
-            "isVersioningEnabled",
-          ),
-          staticWebsite: common.pickFromMockedResource(
             staticWebsite,
-            storage.StorageAccountStaticWebsite,
-            "indexDocument",
-          ),
-          profile: common.pickFromMockedResource(
-            profile,
-            cdn.Profile,
-            "resourceGroupName",
-            "profileName",
-          ),
-          endpoint: common.pickFromMockedResource(
             endpoint,
-            cdn.Endpoint,
-            "resourceGroupName",
-            "profileName",
-            "endpointName",
-            "isHttpAllowed",
-            "isHttpsAllowed",
-            "isCompressionEnabled",
-            "contentTypesToCompress",
-            "origins",
-            "deliveryPolicy",
-          ),
-          cdnEndpointHost: endpoint.hostName,
-          records: records.map(
-            ({ domain, recordSet, httpsResource, ...record }) => ({
+            record: { domain, recordSet, httpsResource, ...record },
+          }) => ({
+            sa: common.pickFromMockedResource(
+              sa,
+              storage.StorageAccount,
+              "accountName",
+              "allowBlobPublicAccess",
+              "enableHttpsTrafficOnly",
+              "minimumTlsVersion",
+              "networkRuleSet",
+              "resourceGroupName",
+            ),
+            endpointHost: sa.primaryEndpoints.web.apply(
+              (url) => new URL(url).host,
+            ),
+            blobServiceProperties: common.pickFromMockedResource(
+              blobServiceProperties,
+              storage.BlobServiceProperties,
+              "isVersioningEnabled",
+            ),
+            staticWebsite: common.pickFromMockedResource(
+              staticWebsite,
+              storage.StorageAccountStaticWebsite,
+              "indexDocument",
+            ),
+            endpoint: common.pickFromMockedResource(
+              endpoint,
+              cdn.Endpoint,
+              "resourceGroupName",
+              "profileName",
+              "endpointName",
+              "isHttpAllowed",
+              "isHttpsAllowed",
+              "isCompressionEnabled",
+              "contentTypesToCompress",
+              "origins",
+              "deliveryPolicy",
+            ),
+            cdnEndpointHost: endpoint.hostName,
+            record: {
               ...record,
               domain: common.pickFromMockedResource(
                 domain,
@@ -148,31 +159,39 @@ const performTestAsync = async (
                 cdnHttps.CDNCustomDomainHTTPSResource,
                 "httpsEnabled",
               ),
-            }),
-          ),
-        })
-        .apply(
-          ({
-            sa,
-            endpointHost,
-            blobServiceProperties,
-            staticWebsite,
-            profile,
-            endpoint,
-            cdnEndpointHost,
-            records,
-          }) => {
-            try {
-              // CDN Profile
-              const expectedProfile = {
-                resourceGroupName: rg.name,
-                profileName: `${config.organization}-${config.environment}`,
-              };
-              c.deepEqual(profile, expectedProfile);
-
+            },
+          }),
+        ),
+      })
+      .apply(({ profile, endpoints }) => {
+        try {
+          // CDN Profile
+          const expectedProfile = {
+            resourceGroupName: rg.name,
+            profileName: `${config.organization}-${config.environment}`,
+          };
+          c.deepEqual(profile, expectedProfile);
+          const uniformEndpoints = spec.convertToArrayWithUniformItems(
+            config.endpoints,
+          );
+          c.deepEqual(uniformEndpoints.length, endpoints.length);
+          endpoints.forEach(
+            (
+              {
+                sa,
+                blobServiceProperties,
+                staticWebsite,
+                endpointHost,
+                cdnEndpointHost,
+                endpoint,
+                record,
+              },
+              idx,
+            ) => {
+              const { zone, ...uniformEndpoint } = uniformEndpoints[idx];
               // Storage account
               c.deepEqual(sa, {
-                accountName: `${config.organization}${config.environment}site`,
+                accountName: `${config.organization}${config.environment}site${uniformEndpoint.id}`,
                 allowBlobPublicAccess: true, // Public website - don't require Azure authentication to access data
                 enableHttpsTrafficOnly: true, // Disallow unencrypted traffic (notice that CDN allows http, but only for http -> https redirect)
                 minimumTlsVersion: "TLS1_2",
@@ -190,7 +209,7 @@ const performTestAsync = async (
               const expectedEndpoint = {
                 resourceGroupName: rg.name,
                 profileName: expectedProfile.profileName,
-                endpointName: `${config.organization}-${config.environment}`,
+                endpointName: `${config.organization}-${config.environment}-${uniformEndpoint.id}`,
                 isCompressionEnabled: true,
                 isHttpAllowed: true, // For http -> https redirect, instead of giving error on http
                 isHttpsAllowed: true, // Https is the only really useable protocol
@@ -207,64 +226,40 @@ const performTestAsync = async (
                 deliveryPolicy: spec.deliveryPolicy,
               };
               c.deepEqual(endpoint, expectedEndpoint);
-              const { domainNames } = config;
-              c.deepEqual(
-                records,
-                (Array.isArray(domainNames)
-                  ? domainNames
-                  : domainNames.domains
-                ).map((domainName) => {
-                  const hasCNameRecord =
-                    typeof domainName !== "string" ||
-                    !Array.isArray(domainNames);
-                  const hostName = hasCNameRecord
-                    ? `${
-                        typeof domainName === "string"
-                          ? domainName
-                          : domainName.relativeName
-                      }.${
-                        typeof domainName === "string"
-                          ? Array.isArray(domainNames)
-                            ? "this-should-not-happen"
-                            : domainNames.defaultZone.zoneName
-                          : domainName.zone.zoneName
-                      }`
-                    : domainName;
-                  return {
-                    hostName,
-                    domain: {
-                      resourceGroupName: rg.name,
-                      profileName: expectedProfile.profileName,
-                      endpointName: expectedEndpoint.endpointName,
-                      customDomainName: "website",
-                      hostName,
-                    },
-                    recordSet: hasCNameRecord
-                      ? {
-                          recordType: "CNAME",
-                          cnameRecord: {
-                            cname: cdnEndpointHost,
-                          },
-                          relativeRecordSetName:
-                            typeof domainName === "string"
-                              ? domainName
-                              : domainName.relativeName,
-                          ttl: 3600,
-                        }
-                      : undefined,
-                    httpsResource: {
-                      httpsEnabled: true,
-                    },
-                  };
-                }),
-              );
-              observer.complete();
-            } catch (e) {
-              observer.error(e);
-            }
-          },
-        );
-    });
+              const hasCNameRecord = !!zone;
+              const hostName = hasCNameRecord
+                ? `${uniformEndpoint.dnsName}.${zone.zoneName}`
+                : uniformEndpoint.dnsName;
+              c.deepEqual(record, {
+                hostName,
+                domain: {
+                  resourceGroupName: rg.name,
+                  profileName: expectedProfile.profileName,
+                  endpointName: expectedEndpoint.endpointName,
+                  customDomainName: `website-${uniformEndpoint.id}`,
+                  hostName,
+                },
+                recordSet: hasCNameRecord
+                  ? {
+                      recordType: "CNAME",
+                      cnameRecord: {
+                        cname: cdnEndpointHost,
+                      },
+                      relativeRecordSetName: uniformEndpoint.dnsName,
+                      ttl: 3600,
+                    }
+                  : undefined,
+                httpsResource: {
+                  httpsEnabled: true,
+                },
+              });
+            },
+          );
+          observer.complete();
+        } catch (e) {
+          observer.error(e);
+        }
+      });
   } catch (e) {
     observer.error(e);
   }
