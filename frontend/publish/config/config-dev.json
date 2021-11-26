@@ -2,5 +2,6 @@
   "resourceGroupName": "codewell-dev-managed-site",
   "organization": "codewell",
   "environment": "dev",
-  "endpoints": "main"
+  "relativeCodeDirectory": "../code",
+  "idInfo": "main"
 }

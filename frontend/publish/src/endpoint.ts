@@ -43,15 +43,17 @@ export const pickSuitableEndpointID = (
       // We might have versions: [2.0, 1.1, 1.0], and we might be publishing version 1.2 as a security patch after 1.1
       // -> latest previous version is *not* the first element of previousVersions array.
       //    Rather it is first element which is less than current version
-      const latestPreviousVersion = previousVersions.find(
+      const latestPreviousVersionIndex = previousVersions.findIndex(
         (previous) => semver.compare(previous, currentVersion) < 0,
       );
-      if (latestPreviousVersion) {
-        // 4. Current ID is next ID in list after ID encoded in previous version tag name.
-        // If next index in list is bigger than list length, it will be rotated back to 0 with modulus operator.
+      if (latestPreviousVersionIndex === 0) {
+        // 4. Proceed only if current version is newest - in blue & green deployment, it makes no sense to publish patches to old versions.
         currentID =
           idList[
-            (idList.indexOf(tagInfoByVersion[latestPreviousVersion].id) + 1) %
+            (idList.indexOf(
+              tagInfoByVersion[previousVersions[latestPreviousVersionIndex]].id,
+            ) +
+              1) %
               idList.length
           ];
       }
