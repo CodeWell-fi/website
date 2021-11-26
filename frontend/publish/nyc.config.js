@@ -7,6 +7,7 @@ module.exports = {
   "exclude": [
     "dist/**/*.d.ts",
     "**/__test__/*.[jt]s",
+    "*/naming.[jt]s",
   ],
   "reporter": [
     "text",
