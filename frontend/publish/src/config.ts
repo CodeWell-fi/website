@@ -81,3 +81,7 @@ export const infraConfig = t.type(
   },
   "InfrastructureConfiguration",
 );
+
+export const packageJsonWithVersion = t.type({
+  version: validation.nonEmptyString,
+});

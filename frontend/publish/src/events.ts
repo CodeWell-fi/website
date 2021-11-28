@@ -3,6 +3,10 @@ import * as storage from "@azure/storage-blob";
 
 // This is virtual interface - no instances implementing this are ever created
 export interface VirtualWebsiteDeployEvents {
+  skippedDeployment: {
+    version: string;
+    previousVersions: ReadonlyArray<string>;
+  };
   deletedFilesFromWebsiteContainer: {
     containerURL: string;
     blobNames: ReadonlyArray<string>;
@@ -45,6 +49,16 @@ export const consoleLoggingRunEventEmitterBuilder = (
   const logger = common.createConsoleLogger(
     logMessagePrefix,
     consoleAbstraction,
+  );
+
+  builder.addEventListener("skippedDeployment", (arg) =>
+    logger(
+      `Skipping deployment because version ${
+        arg.version
+      } is already previously deployed, or is not newest (newest is ${
+        arg.previousVersions[0] ?? "none"
+      }).`,
+    ),
   );
 
   builder.addEventListener("deletedFilesFromWebsiteContainer", (arg) =>

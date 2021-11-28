@@ -73,39 +73,53 @@ const main = async () => {
       credentials = new identity.ManagedIdentityCredential(auth.clientId);
       break;
   }
-  const websiteCodeDir = `${process.cwd()}/${relativeCodeDirectory}`;
+  const websiteCodeDir = path.normalize(
+    `${process.cwd()}/${relativeCodeDirectory}`,
+  );
   const id = await pickSuitableID(idInfo, websiteCodeDir);
-  if (id) {
+  const eventEmitter = events
+    .consoleLoggingRunEventEmitterBuilder()
+    .createEventEmitter();
+  if (typeof id === "string" || "id" in id) {
     const idString = typeof id === "string" ? id : id.id;
-    await deploy(
-      events.consoleLoggingRunEventEmitterBuilder().createEventEmitter(),
-      {
-        credentials,
-        websiteContainer: {
-          containerURL: `https://${naming.getStorageAccountName(
-            organization,
-            environment,
-            idString,
-          )}.blob.core.windows.net/$web`,
-          webpageDir: path.normalize(`${websiteCodeDir}/build`),
-        },
-        cdnEndpoint: {
-          subscriptionId: azure.subscriptionId,
-          resourceGroupName,
-          profileName: naming.getCDNProfileName(organization, environment),
-          endpointName: naming.getCDNProfileEndpointName(
-            organization,
-            environment,
-            idString,
-          ),
-        },
+    await deploy(eventEmitter, {
+      credentials,
+      websiteContainer: {
+        containerURL: `https://${naming.getStorageAccountName(
+          organization,
+          environment,
+          idString,
+        )}.blob.core.windows.net/$web`,
+        webpageDir: `${websiteCodeDir}/build`,
       },
-    );
+      cdnEndpoint: {
+        subscriptionId: azure.subscriptionId,
+        resourceGroupName,
+        profileName: naming.getCDNProfileName(organization, environment),
+        endpointName: naming.getCDNProfileEndpointName(
+          organization,
+          environment,
+          idString,
+        ),
+      },
+    });
     if (typeof id !== "string") {
-      // TODO create & push git tag here.
+      const tagName = ep.getTagNameFromEncoded(id);
+      await execFileAsync("git", [
+        "-c",
+        "user.email=cd-automation@codewell-site.project",
+        "-c",
+        "user.name=CD Automation",
+        "tag",
+        "-a",
+        "-m",
+        `Website ${id.id} release ${id.version}.`,
+        tagName,
+      ]);
+      await execFileAsync("git", ["push", "origin", tagName]);
     }
   } else {
-    // TODO invoke event or just write to console here
+    eventEmitter.emit("skippedDeployment", id);
   }
 };
 
@@ -120,28 +134,43 @@ const pickSuitableID = async (
       ? [idInfo.id]
       : idInfo.ids;
   const tagInfo = typeof idInfo === "string" ? undefined : idInfo.tagInfo;
-  let nextID: string | { id: string; tagInfo: config.TagInfo } | undefined;
+  let nextID:
+    | string
+    | { version: string; id: string; tagInfo: config.TagInfo }
+    | { version: string; previousVersions: Array<string> };
   if (tagInfo) {
     if (idArray.length < 1) {
       throw new Error("Please supply at least one deployment kind ID.");
     }
-    const id = ep.pickSuitableEndpointID(
-      idArray, // ["blue", "green"],
-      tagInfo.prefix, // "website-",
-      (
-        await execFileAsync("git", ["ls-remote", "--tags", "--refs", "origin"])
-      ).stdout
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0)
-        .map((l) => l.substr(l.lastIndexOf("\t") + "refs/tags/".length + 1)),
-      `from ${websiteCodeDir}/package.json`,
-      tagInfo.versionSeparator, // "-v",
+    const version = validation.decodeOrThrow(
+      config.packageJsonWithVersion.decode,
+      JSON.parse(await fs.readFile(`${websiteCodeDir}/package.json`, "utf8")),
+    ).version;
+    const { id, previousVersions } = ep.pickSuitableEndpointID(
+      tagInfo,
+      idArray,
+      ep.parseGitTags(
+        (
+          await execFileAsync("git", [
+            "ls-remote",
+            "--tags",
+            "--refs",
+            "origin",
+          ])
+        ).stdout,
+      ),
+      version,
     );
     if (id) {
       nextID = {
-        id,
+        version,
+        id: id,
         tagInfo,
+      };
+    } else {
+      nextID = {
+        version,
+        previousVersions,
       };
     }
   } else {
