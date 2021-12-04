@@ -11,33 +11,57 @@ const zoneInfo = t.type(
 
 export type ZoneInfo = t.TypeOf<typeof zoneInfo>;
 
-const domainNameList = t.array(
-  t.union([
+const makeRecordsDictionary = <T extends t.Mixed>(valueType: T) =>
+  t.record(
+    t.string, // Will be used in Pulumi resource IDs
+    valueType,
+  );
+
+const cdnEndpointSpecification = t.union(
+  [
+    // When no Azure-managed zone to join to
     validation.nonEmptyString,
-    t.type(
-      {
-        zone: zoneInfo,
-        relativeName: validation.nonEmptyString,
-      },
-      "ZoneJoinInfo",
+    t.array(validation.nonEmptyString, "UnmanagedDNSNamesArray"),
+    // When joining to Azure-managed DNS zone
+    t.union(
+      [
+        t.type(
+          {
+            records: makeRecordsDictionary(
+              t.type({
+                relativeName: validation.nonEmptyString,
+                zone: zoneInfo,
+              }),
+            ),
+          },
+          "ManagedDNSNamesFromMultipleZones",
+        ),
+        t.type(
+          {
+            zone: zoneInfo,
+            records: makeRecordsDictionary(
+              t.string, // Relative name
+            ),
+          },
+          "ManagedDNSNamesFromOneZone",
+        ),
+      ],
+      "ManagedDNSNames",
     ),
-  ]),
-  "DomainNameList",
+  ],
+  "CDNEndpointSpecification",
 );
 
 export const configuration = t.type({
   resourceGroupName: validation.nonEmptyString,
   organization: validation.nonEmptyString,
   environment: validation.nonEmptyString,
-  domainNames: t.union(
+  endpoints: t.union(
     [
-      domainNameList,
-      t.type({
-        defaultZone: zoneInfo,
-        domains: domainNameList,
-      }),
+      cdnEndpointSpecification,
+      t.array(cdnEndpointSpecification, "CDNEndpointArray"),
     ],
-    "DomainNameJoinConfiguration",
+    "CDNEndpoints",
   ),
 });
 

@@ -35,11 +35,53 @@ export const pipelineConfig = t.type(
   "PipelineConfiguration",
 );
 
+const tagInfo = t.type(
+  {
+    prefix: validation.nonEmptyString,
+    versionSeparator: validation.nonEmptyString,
+  },
+  "PublishingTagInfo",
+);
+
+export type TagInfo = t.TypeOf<typeof tagInfo>;
+
+const idInfo = t.union(
+  [
+    // Just one ID and no tag information (e.g. dev env)
+    validation.nonEmptyString,
+    // Just one ID with tag information (e.g. test/qa)
+    t.type(
+      {
+        id: validation.nonEmptyString,
+        tagInfo,
+      },
+      "SingleIDWithTags",
+    ),
+    // Multiple IDs (e.g. prod with blue-green deployment)
+    t.type(
+      {
+        ids: t.array(validation.nonEmptyString),
+        tagInfo,
+      },
+      "MultipleIDs",
+    ),
+  ],
+  "IDInfo",
+);
+
+export type IDInfo = t.TypeOf<typeof idInfo>;
+
 export const infraConfig = t.type(
   {
     organization: validation.nonEmptyString,
     environment: validation.nonEmptyString,
     resourceGroupName: validation.nonEmptyString,
+    relativeCodeDirectory: validation.nonEmptyString,
+    idInfo,
   },
   "InfrastructureConfiguration",
 );
+
+export const packageJsonWithVersion = t.type({
+  version: validation.nonEmptyString,
+});

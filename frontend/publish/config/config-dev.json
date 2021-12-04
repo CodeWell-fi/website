@@ -1,5 +1,7 @@
 {
   "resourceGroupName": "codewell-dev-managed-site",
   "organization": "codewell",
-  "environment": "dev"
+  "environment": "dev",
+  "relativeCodeDirectory": "../code",
+  "idInfo": "main"
 }

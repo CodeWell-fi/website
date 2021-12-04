@@ -1,14 +1,15 @@
 {
-  "resourceGroupName": "codewell-dev-managed-site",
+  "resourceGroupName": "codewell-prod-managed-site",
   "organization": "codewell",
-  "environment": "dev",
+  "environment": "prod",
   "endpoints": {
     "zone": {
       "resourceGroupName": "codewell-dns-managed-site",
       "zoneName": "codewell.fi"
     },
     "records": {
-      "main": "dev"
+      "blue": "prod1",
+      "green": "prod2"
     }
   },
   "httpsEnabled": true

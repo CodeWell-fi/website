@@ -1,0 +1,13 @@
+name: Infrastructure Website Pipeline - PROD
+on: workflow_dispatch # Only manually executed
+
+jobs:
+  perform_deployment:
+    uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@main
+    with:
+      INFRA_ENV: prod
+      REQUIRED_BRANCH: main
+    secrets:
+      AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+      SECRET_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+      SECRET_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}

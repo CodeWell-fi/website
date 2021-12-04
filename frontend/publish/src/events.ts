@@ -3,6 +3,10 @@ import * as storage from "@azure/storage-blob";
 
 // This is virtual interface - no instances implementing this are ever created
 export interface VirtualWebsiteDeployEvents {
+  skippedDeployment: {
+    version: string;
+    previousVersions: ReadonlyArray<string>;
+  };
   deletedFilesFromWebsiteContainer: {
     containerURL: string;
     blobNames: ReadonlyArray<string>;
@@ -47,6 +51,16 @@ export const consoleLoggingRunEventEmitterBuilder = (
     consoleAbstraction,
   );
 
+  builder.addEventListener("skippedDeployment", (arg) =>
+    logger(
+      `Skipping deployment because version ${
+        arg.version
+      } is already previously deployed, or is not newest (newest is ${
+        arg.previousVersions[0] ?? "none"
+      }).`,
+    ),
+  );
+
   builder.addEventListener("deletedFilesFromWebsiteContainer", (arg) =>
     logger(
       `Deleted ${arg.blobNames.length} files from container "${arg.containerURL}".`,
@@ -61,7 +75,7 @@ export const consoleLoggingRunEventEmitterBuilder = (
     logger("Starting Azure CDN endpoint purge"),
   );
   builder.addEventListener("cdnPurgeProgress", (arg) => {
-    if (arg.elapsedS % 10 === 0) {
+    if (Math.trunc(arg.elapsedS) % 10 === 0) {
       logger(`Waiting for Azure CDN endpoint purge... (~${arg.elapsedS}s)`);
     }
   });
