@@ -16,6 +16,7 @@ jobs:
     uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@issue/21_production_pipelines
     with:
       INFRA_ENV: dev
+    secrets:
       AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
       ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
       ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
