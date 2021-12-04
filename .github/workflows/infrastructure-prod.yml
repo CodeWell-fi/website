@@ -3,7 +3,7 @@ on: workflow_dispatch # Only manually executed
 
 jobs:
   perform_deployment:
-    uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@issue/21_production_pipelines
+    uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@${{ github.ref_name }}
     with:
       INFRA_ENV: prod
       REQUIRED_BRANCH: main
