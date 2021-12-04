@@ -3,15 +3,19 @@
 on:
   workflow_call:
     inputs:
-      INFRA_ENV:
+      environment:
         required: true
         type: string
+      required_branch:
+        required: false
+        type: string
+        default: ''
     secrets:
-      AZURE_PIPELINE_CONFIG:
+      azure_pipeline_config:
         required: true
-      SECRET_TENANT_ID:
+      secret_tenant_id:
         required: true
-      SECRET_SUBSCRIPTION_ID:
+      secret_subscription_id:
         required: true
 
 defaults:
@@ -20,14 +24,15 @@ defaults:
     working-directory: infrastructure/website
 
 env:
-  INFRA_ENV: ${{ inputs.INFRA_ENV }}
-  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG }}
-  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
-  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+  INFRA_ENV: ${{ inputs.environment }}
+  REQUIRED_BRANCH: ${{ inputs.required_branch }}
+  AZURE_PIPELINE_CONFIG: ${{ secrets.azure_pipeline_config }}
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.secret_tenant_id }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.secret_subscription_id }}
   
 jobs:
   run_infrastructure_pipeline_pulumi_preview:
-    name: Preview infrastructure changes for ${{ inputs.INFRA_ENV }}
+    name: Preview infrastructure changes for ${{ inputs.environment }}
     runs-on: ubuntu-latest
     outputs:
       run_deploy: ${{ steps.preview.outputs.run_deploy }}
@@ -44,6 +49,15 @@ jobs:
           set -e
 
           echo 'Reacting to Github event ${{ github.event_name }}.'
+          if [[ -n "${REQUIRED_BRANCH}" ]]; then
+            # Check that current branch is allowed one.
+            CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+            if [[ "${CURRENT_BRANCH}" != "${REQUIRED_BRANCH}" ]]; then
+              echo 'Current branch is ${CURRENT_BRANCH}, however, this action can only be run on ${REQUIRED_BRANCH} branch!' 1>&2
+              exit 1
+            fi
+          fi
+
           npm ci --ignore-scripts
           npm run build
           npm run test
@@ -102,7 +116,7 @@ jobs:
           directory: infrastructure/website
 
   run_infrastructure_pipeline_pulumi_up:
-    name: Perform infrastructure changes
+    name: Perform infrastructure changes for ${{ inputs.environment }}
     needs: [ run_infrastructure_pipeline_pulumi_preview ]
     if: ${{ needs.run_infrastructure_pipeline_pulumi_preview.outputs.run_deploy == 'true' }}
     runs-on: ubuntu-latest
