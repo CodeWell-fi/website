@@ -1,6 +1,5 @@
 import * as process from "process";
 import * as fs from "fs/promises";
-import * as os from "os";
 import * as path from "path";
 import * as cp from "child_process";
 import { promisify } from "util";
@@ -57,16 +56,14 @@ const main = async () => {
   switch (auth.type) {
     case "sp":
       {
-        const certPath = `${await fs.mkdtemp(
-          `${os.tmpdir()}/website-deploy`,
-        )}/cert.pem`;
-        await fs.writeFile(certPath, `${auth.keyPEM}${auth.certPEM}`);
         credentials = new identity.ClientCertificateCredential(
           azure.tenantId,
           auth.clientId,
-          certPath,
+          {
+            certificate: `${auth.keyPEM}${auth.certPEM}`,
+            certificatePath: undefined,
+          },
         );
-        await fs.rm(certPath);
       }
       break;
     case "msi":
