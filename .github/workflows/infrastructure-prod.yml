@@ -5,9 +5,9 @@ jobs:
   perform_deployment:
     uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@main
     with:
-      INFRA_ENV: prod
-      REQUIRED_BRANCH: main
+      environment: prod
+      required_branch: main
     secrets:
-      AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
-      SECRET_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
-      SECRET_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+      azure_pipeline_config: ${{ secrets.AZURE_PIPELINE_CONFIG_PROD }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
+      secret_tenant_id: ${{ secrets.SECRET_TENANT_ID }}
+      secret_subscription_id: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
