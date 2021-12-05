@@ -1,5 +1,6 @@
 import * as common from "@data-heaving/common";
 import * as storage from "@azure/storage-blob";
+import type * as types from "./types";
 
 // This is virtual interface - no instances implementing this are ever created
 export interface VirtualWebsiteDeployEvents {
@@ -23,6 +24,10 @@ export interface VirtualWebsiteDeployEvents {
   };
   cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
     purgeSuccess: boolean;
+  };
+  gitTagAboutToBeCreated: {
+    tagName: string;
+    tagInfo: types.EncodedTagName;
   };
 }
 
@@ -84,6 +89,12 @@ export const consoleLoggingRunEventEmitterBuilder = (
       `Completed Azure CDN endpoint purge ${
         arg.purgeSuccess ? "" : "un"
       }successfully.`,
+    ),
+  );
+
+  builder.addEventListener("gitTagAboutToBeCreated", (arg) =>
+    logger(
+      `Will create Git tag "${arg.tagName}" based on ID "${arg.tagInfo.id}" and version "${arg.tagInfo.version}".`,
     ),
   );
 

@@ -1,0 +1,13 @@
+{
+  "resourceGroupName": "codewell-prod-managed-site",
+  "organization": "codewell",
+  "environment": "prod",
+  "relativeCodeDirectory": "../code",
+  "idInfo": {
+    "ids": [ "blue", "green" ],
+    "tagInfo": {
+      "prefix": "site-",
+      "versionSeparator": "-v"
+    }
+  }
+}

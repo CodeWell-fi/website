@@ -102,6 +102,10 @@ const main = async () => {
     });
     if (typeof id !== "string") {
       const tagName = ep.getTagNameFromEncoded(id);
+      eventEmitter.emit("gitTagAboutToBeCreated", {
+        tagName,
+        tagInfo: id,
+      });
       await execFileAsync("git", [
         "-c",
         "user.email=cd-automation@codewell-site.project",

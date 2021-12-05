@@ -19,3 +19,8 @@ const testConfigParsingWorks = test.macro(async (c, envName: string) => {
 });
 
 test("Test that dev configuration is parseable", testConfigParsingWorks, "dev");
+test(
+  "Test that prod configuration is parseable",
+  testConfigParsingWorks,
+  "prod",
+);

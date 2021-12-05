@@ -8,6 +8,7 @@ jobs:
       environment: prod
       github_event_to_proceed_to_apply: workflow_dispatch
       required_branch: main
+      upload_code_coverage: false
     secrets:
       azure_pipeline_config: ${{ secrets.AZURE_PIPELINE_CONFIG_PROD }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
       secret_tenant_id: ${{ secrets.SECRET_TENANT_ID }}
