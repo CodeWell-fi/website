@@ -6,6 +6,9 @@ on:
       environment:
         required: true
         type: string
+      github_event_to_proceed_to_apply:
+        required: true
+        type: string
       required_branch:
         required: false
         type: string
@@ -90,7 +93,7 @@ jobs:
           pulumi refresh
           pulumi preview
 
-          if [[ '${{ github.event_name }}' == 'push' ]]; then
+          if [[ '${{ github.event_name }}' == '${{ inputs.github_event_to_proceed_to_apply }}' ]]; then
             PACKAGE_VERSION="$(cat package.json | jq -rM .version)"
             GIT_TAG_NAME="infra-${INFRA_ENV}-v${PACKAGE_VERSION}"
             if [[ -z "$(git ls-remote --tags origin "${GIT_TAG_NAME}")" ]]; then

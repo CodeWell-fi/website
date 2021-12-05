@@ -16,6 +16,7 @@ jobs:
     uses: CodeWell-fi/website/.github/workflows/infrastructure.yml@main
     with:
       environment: dev
+      github_event_to_proceed_to_apply: push
     secrets:
       azure_pipeline_config: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline
       secret_tenant_id: ${{ secrets.SECRET_TENANT_ID }}
