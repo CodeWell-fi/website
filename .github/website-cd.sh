@@ -9,6 +9,6 @@ export WEBSITE_INFRA_CONFIG="$(cat "config/config-${WEBSITE_ENV}.json")"
 npm run build
 npm run test
 
-if [[ -z "$1"]] || [[ "${GITHUB_EVENT_NAME}" == "$1" ]]; then
+if [[ -z "$1" ]] || [[ "${GITHUB_EVENT_NAME}" == "$1" ]]; then
   npm run deploy
 fi
