@@ -39,9 +39,6 @@ const deploy = async (
   })) {
     blobNames.push(blob.name);
   }
-  if (blobNames.length >= 0) {
-    throw new Error("WAT");
-  }
 
   // Upload all new files
   const uploadOneFile = async (filePath: string) => {
