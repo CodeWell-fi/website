@@ -209,7 +209,7 @@ const afterDeployment = async (
     credentials,
     subscriptionId,
   ).recordSets.createOrUpdate(
-    resourceGroupName,
+    zone.resourceGroupName,
     zone.name,
     zone.relativeRecordName,
     "CNAME",
