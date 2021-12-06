@@ -12,12 +12,12 @@ import * as https from "./cdn-https";
 import * as naming from "./naming";
 
 const pulumiProgram = async (config: input.Configuration) => {
-  const { clientId, subscriptionId } = await auth.getClientConfig();
+  const { objectId, subscriptionId } = await auth.getClientConfig();
   return pulumiResources({
     config,
     rg: await resources.getResourceGroup(config),
     websiteUploader: {
-      principalId: clientId,
+      principalId: objectId,
       roleDefinitionId: (
         await auth.getRoleDefinition({
           // From https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
