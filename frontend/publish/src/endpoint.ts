@@ -1,7 +1,8 @@
 import * as semver from "semver";
+import type * as types from "./types";
 
 export const pickSuitableEndpointID = (
-  tagInfo: TagInfo,
+  tagInfo: types.TagInfo,
   idList: ReadonlyArray<string>, // This must be *array*, so that the next id calculation would be consistent.
   allExistingTags: ReadonlyArray<string>,
   currentVersion: string, // Must be pre-validated to be semver!
@@ -54,23 +55,12 @@ export const pickSuitableEndpointID = (
   };
 };
 
-export interface TagInfo {
-  prefix: string;
-  versionSeparator: string;
-}
-
-export interface EncodedTagName {
-  tagInfo: TagInfo;
-  id: string;
-  version: string;
-}
-
 export const tryGetEncodedTagFromTagString = (
-  tagInfo: TagInfo,
+  tagInfo: types.TagInfo,
   tagName: string,
 ) => {
   const { prefix, versionSeparator } = tagInfo;
-  let encoded: EncodedTagName | undefined;
+  let encoded: types.EncodedTagName | undefined;
   if (tagName.startsWith(prefix)) {
     const versionSeparatorIndex = tagName.indexOf(
       versionSeparator,
@@ -92,7 +82,7 @@ export const getTagNameFromEncoded = ({
   tagInfo: { prefix, versionSeparator },
   id,
   version,
-}: EncodedTagName) => `${prefix}${id}${versionSeparator}${version}`;
+}: types.EncodedTagName) => `${prefix}${id}${versionSeparator}${version}`;
 
 export const parseGitTags = (lsRemoteOutput: string) =>
   lsRemoteOutput

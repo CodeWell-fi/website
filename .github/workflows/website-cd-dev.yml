@@ -8,7 +8,6 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: frontend/publish
 env:
   WEBSITE_ENV: dev
   AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_DEV }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
@@ -33,17 +32,11 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
           name: site-contents
           path: frontend/code/build
-      - id: preview
+      - id: deploy
         name: Deploy website
         run: |
           set -e
-
-          npm ci --ignore-scripts
-          cp ../../infrastructure/website/src/naming.ts src
-          export WEBSITE_INFRA_CONFIG="$(cat "config/config-${WEBSITE_ENV}.json")"
-          npm run build
-          npm run test
-          npm run deploy
+          ./.github/website-cd.sh
       - uses: codecov/codecov-action@v1
         with:
           flags: frontend-publish

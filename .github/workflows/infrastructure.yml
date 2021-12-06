@@ -13,6 +13,10 @@ on:
         required: false
         type: string
         default: ''
+      upload_code_coverage:
+        required: false
+        type: boolean
+        default: true
     secrets:
       azure_pipeline_config:
         required: true
@@ -114,6 +118,7 @@ jobs:
             echo 'Not reacting to push event, so not proceeding to deploy stage'
           fi
       - uses: codecov/codecov-action@v1
+        if: ${{ inputs.upload_code_coverage }}
         with:
           flags: infrastructure-website
           directory: infrastructure/website
