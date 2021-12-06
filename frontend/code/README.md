@@ -6,7 +6,6 @@ Furthermore, the [MUI library](https://mui.com) is used to minimize direct manip
 - The `eslint` package is locked to specific version to override CRA's version. With CRA's version, there will be an error: `Error while loading rule 'prettier/prettier': context.getPhysicalFilename is not a function`, and there is [solution explanation online](https://charles-stover.medium.com/resolving-prettier-react-context-getphysicalfilename-is-not-a-function-52a250f68291).
 
 # Code structure
-
 The code directly in `src` folder defines base structure of the web page: header, footer, content navigation, and content articles.
 Content navigation component is in `src/ScrollTabs` folder, while the content articles are in `src/sections` folder.
 The `src/common` folder contains some shared code utilized in several places.
