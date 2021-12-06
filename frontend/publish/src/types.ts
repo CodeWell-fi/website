@@ -12,6 +12,7 @@ export interface EncodedTagName {
 export interface DeploymentIDInfo {
   encodedTagName: EncodedTagName;
   zone: {
+    resourceGroupName: string;
     name: string;
     relativeRecordName: string;
   };

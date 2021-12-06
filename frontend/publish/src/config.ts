@@ -64,6 +64,7 @@ const idInfo = t.union(
         tagInfo,
         zone: t.intersection([
           t.type({
+            resourceGroupName: validation.nonEmptyString,
             name: validation.nonEmptyString,
           }),
           t.partial({

@@ -10,6 +10,7 @@
       "versionSeparator": "-v"
     },
     "zone": {
+      "resourceGroupName": "codewell-dns-managed-site",
       "name": "codewell.fi"
     }
   }

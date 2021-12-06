@@ -4,6 +4,11 @@ on:
     workflows: [ "Website CI Pipeline" ]
     branches: [ main ]
     types: [ completed ]
+  pull_request:
+    branches:
+    - main
+    paths:
+    - 'frontend/publish/**'
 
 defaults:
   run:
@@ -26,6 +31,7 @@ jobs:
         with:
           node-version: 16
       - uses: dawidd6/action-download-artifact@v2
+        if: ${{ github.event_name == 'workflow_run' }}
         name: Download build artifact
         with:
           workflow: website-ci.yml
@@ -36,7 +42,7 @@ jobs:
         name: Deploy website
         run: |
           set -e
-          ./.github/website-cd.sh
+          ./.github/website-cd.sh 'workflow_run'
       - uses: codecov/codecov-action@v1
         with:
           flags: frontend-publish

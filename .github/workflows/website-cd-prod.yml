@@ -37,4 +37,5 @@ jobs:
           fi
 
           ./.github/website-ci.sh
+          # TOOD perform deployment in separate job for manual approval?
           ./.github/website-cd.sh
