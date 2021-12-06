@@ -1,0 +1,40 @@
+name: Website CD Pipeline - PROD
+on: workflow_dispatch # Only manually executed
+
+defaults:
+  run:
+    shell: bash
+env:
+  # For CI
+  CONTACT_EMAIL_ADDRESS: ${{ secrets.CONTACT_EMAIL_ADDRESS }}
+  # For CD
+  WEBSITE_ENV: prod
+  AZURE_PIPELINE_CONFIG: ${{ secrets.AZURE_PIPELINE_CONFIG_PROD }} # Value of this GH secret is originally got from Azure KV secret created by bootstrap pipeline, and is superset of schema defined in website/src/config.ts file
+  ONLY_TO_MASK_OUTPUT_TENANT_ID: ${{ secrets.SECRET_TENANT_ID }}
+  ONLY_TO_MASK_OUTPUT_SUBSCRIPTION_ID: ${{ secrets.SECRET_SUBSCRIPTION_ID }}
+  # For checking that pipeline is executed only from main branch
+  REQUIRED_BRANCH: main
+jobs:
+  perform-cd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1 # No need to get full history
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+      - id: deploy
+        name: Deploy website
+        run: |
+          set -e
+          
+          # Check that current branch is allowed one.
+          CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "${CURRENT_BRANCH}" != "${REQUIRED_BRANCH}" ]]; then
+            echo 'Current branch is ${CURRENT_BRANCH}, however, this action can only be run on ${REQUIRED_BRANCH} branch!' 1>&2
+            exit 1
+          fi
+
+          ./.github/website-ci.sh
+          ./.github/website-cd.sh

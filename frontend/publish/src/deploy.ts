@@ -22,7 +22,7 @@ export interface Inputs {
 }
 
 const deploy = async (
-  eventEmitter: events.WebsiteDeployEventEimtter,
+  eventEmitter: events.WebsiteDeployEventEmitter,
   {
     credentials,
     websiteContainer: { containerURL, webpageDir },
@@ -90,13 +90,14 @@ const deploy = async (
   // Purge CDN caches
   const contentPaths = ["/*"];
   const cdnPurgeEvent = { contentPaths: [...contentPaths] };
+  const cdnClient = new cdn.CdnManagementClient(
+    credentials,
+    cdnEndpoint.subscriptionId,
+  );
   eventEmitter.emit("cdnPurgeStarting", cdnPurgeEvent);
   const purgeSuccess = await doWithPeriodicProgressReport(
     () =>
-      new cdn.CdnManagementClient(
-        credentials,
-        cdnEndpoint.subscriptionId,
-      ).endpoints.purgeContent(
+      cdnClient.endpoints.purgeContent(
         cdnEndpoint.resourceGroupName,
         cdnEndpoint.profileName,
         cdnEndpoint.endpointName,
@@ -111,6 +112,8 @@ const deploy = async (
     },
   );
   eventEmitter.emit("cdnPurgeCompleted", { ...cdnPurgeEvent, purgeSuccess });
+
+  return cdnClient;
 };
 
 // Slightly modified from https://stackoverflow.com/questions/5827612/node-js-fs-readdir-recursive-directory-search

@@ -17,6 +17,8 @@ const pulumiProgram = async ({
       })
     ).name,
     additionalRecords,
+    // TODO: we want separate SPs to upload and to set DNS records.
+    // It would mean they would need to be created here most likely.
     dnsZoneContributorSPIDs: await Promise.all(
       dnsZoneContributorSPNames.map(async (displayName) => ({
         displayName,

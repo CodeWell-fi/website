@@ -25,9 +25,19 @@ export interface VirtualWebsiteDeployEvents {
   cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
     purgeSuccess: boolean;
   };
-  gitTagAboutToBeCreated: {
+  beforeCreatingGitTag: {
     tagName: string;
-    tagInfo: types.EncodedTagName;
+    deploymentIDInfo: types.DeploymentIDInfo;
+  };
+  afterCreatingGitTag: VirtualWebsiteDeployEvents["beforeCreatingGitTag"] & {
+    tagCreation: {
+      stdout: string;
+      stderr: string;
+    };
+    tagPush: {
+      stdout: string;
+      stderr: string;
+    };
   };
 }
 
@@ -36,7 +46,7 @@ export interface UploadResult {
   uploadResult: storage.BlobUploadCommonResponse;
 }
 
-export type WebsiteDeployEventEimtter =
+export type WebsiteDeployEventEmitter =
   common.EventEmitter<VirtualWebsiteDeployEvents>;
 
 export const createRunEventEmitterBuilder = () =>
@@ -80,8 +90,9 @@ export const consoleLoggingRunEventEmitterBuilder = (
     logger("Starting Azure CDN endpoint purge"),
   );
   builder.addEventListener("cdnPurgeProgress", (arg) => {
-    if (Math.trunc(arg.elapsedS) % 10 === 0) {
-      logger(`Waiting for Azure CDN endpoint purge... (~${arg.elapsedS}s)`);
+    const seconds = Math.trunc(arg.elapsedS);
+    if (seconds % 10 === 0) {
+      logger(`Waiting for Azure CDN endpoint purge... (~${seconds}s)`);
     }
   });
   builder.addEventListener("cdnPurgeCompleted", (arg) =>
@@ -92,11 +103,23 @@ export const consoleLoggingRunEventEmitterBuilder = (
     ),
   );
 
-  builder.addEventListener("gitTagAboutToBeCreated", (arg) =>
+  builder.addEventListener("beforeCreatingGitTag", (arg) =>
     logger(
-      `Will create Git tag "${arg.tagName}" based on ID "${arg.tagInfo.id}" and version "${arg.tagInfo.version}".`,
+      `Created relative record name "${arg.deploymentIDInfo.zone.relativeRecordName}" to zone "${arg.deploymentIDInfo.zone.name}".
+Will create Git tag "${arg.tagName}" based on ID "${arg.deploymentIDInfo.encodedTagName.id}" and version "${arg.deploymentIDInfo.encodedTagName.version}".`,
     ),
   );
+
+  builder.addEventListener("afterCreatingGitTag", (arg) => {
+    logger(arg.tagCreation.stdout);
+    if (arg.tagCreation.stderr.length > 0) {
+      logger(arg.tagCreation.stderr, true);
+    }
+    logger(arg.tagPush.stdout);
+    if (arg.tagPush.stderr.length > 0) {
+      logger(arg.tagPush.stderr, true);
+    }
+  });
 
   return builder;
 };

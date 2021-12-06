@@ -3,9 +3,12 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as cp from "child_process";
 import { promisify } from "util";
+import * as dns from "@azure/arm-dns";
+import * as cdn from "@azure/arm-cdn";
 
 import * as validation from "@data-heaving/common-validation";
 import * as identity from "@azure/identity";
+import * as types from "./types";
 import * as config from "./config";
 import * as naming from "./naming";
 import * as events from "./events";
@@ -36,13 +39,7 @@ const main = async () => {
       throw new Error("The supplied Azure pipeline configuration was invalid");
     },
   );
-  const {
-    organization,
-    environment,
-    resourceGroupName,
-    relativeCodeDirectory,
-    idInfo,
-  } = validation.decodeOrThrow(
+  const infraConfig = validation.decodeOrThrow(
     config.infraConfig.decode,
     JSON.parse(
       process.env[infraConfigEnvName] ??
@@ -51,6 +48,13 @@ const main = async () => {
         ),
     ),
   );
+  const {
+    organization,
+    environment,
+    resourceGroupName,
+    relativeCodeDirectory,
+    idInfo,
+  } = infraConfig;
   // 1. Create credentials
   let credentials: identity.TokenCredential;
   switch (auth.type) {
@@ -77,9 +81,9 @@ const main = async () => {
   const eventEmitter = events
     .consoleLoggingRunEventEmitterBuilder()
     .createEventEmitter();
-  if (typeof id === "string" || "id" in id) {
-    const idString = typeof id === "string" ? id : id.id;
-    await deploy(eventEmitter, {
+  if (typeof id === "string" || "encodedTagName" in id) {
+    const idString = typeof id === "string" ? id : id.encodedTagName.id;
+    const cdnClient = await deploy(eventEmitter, {
       credentials,
       websiteContainer: {
         containerURL: `https://${naming.getStorageAccountName(
@@ -101,23 +105,14 @@ const main = async () => {
       },
     });
     if (typeof id !== "string") {
-      const tagName = ep.getTagNameFromEncoded(id);
-      eventEmitter.emit("gitTagAboutToBeCreated", {
-        tagName,
-        tagInfo: id,
-      });
-      await execFileAsync("git", [
-        "-c",
-        "user.email=cd-automation@codewell-site.project",
-        "-c",
-        "user.name=CD Automation",
-        "tag",
-        "-a",
-        "-m",
-        `Website ${id.id} release ${id.version}.`,
-        tagName,
-      ]);
-      await execFileAsync("git", ["push", "origin", tagName]);
+      await afterDeployment(
+        credentials,
+        infraConfig,
+        azure.subscriptionId,
+        eventEmitter,
+        id,
+        cdnClient,
+      );
     }
   } else {
     eventEmitter.emit("skippedDeployment", id);
@@ -134,12 +129,12 @@ const pickSuitableID = async (
       : "id" in idInfo
       ? [idInfo.id]
       : idInfo.ids;
-  const tagInfo = typeof idInfo === "string" ? undefined : idInfo.tagInfo;
   let nextID:
     | string
-    | { version: string; id: string; tagInfo: config.TagInfo }
+    | types.DeploymentIDInfo
     | { version: string; previousVersions: Array<string> };
-  if (tagInfo) {
+  if (typeof idInfo !== "string") {
+    const tagInfo = idInfo.tagInfo;
     if (idArray.length < 1) {
       throw new Error("Please supply at least one deployment kind ID.");
     }
@@ -163,11 +158,23 @@ const pickSuitableID = async (
       version,
     );
     if (id) {
-      nextID = {
-        version,
-        id: id,
-        tagInfo,
-      };
+      if ("zone" in idInfo) {
+        nextID = {
+          encodedTagName: {
+            version,
+            id,
+            tagInfo,
+          },
+          zone: {
+            ...idInfo.zone,
+            relativeRecordName: idInfo.zone.relativeRecordName ?? "@",
+          },
+        };
+      } else {
+        throw new Error(
+          "This should never happen (pickSuitableEndpointID returned ID but zone was not specified)",
+        );
+      }
     } else {
       nextID = {
         version,
@@ -179,6 +186,73 @@ const pickSuitableID = async (
   }
 
   return nextID;
+};
+
+const afterDeployment = async (
+  credentials: identity.TokenCredential,
+  {
+    organization,
+    environment,
+    resourceGroupName,
+  }: Pick<
+    config.InfraConfig,
+    "organization" | "environment" | "resourceGroupName"
+  >,
+  subscriptionId: string,
+  eventEmitter: events.WebsiteDeployEventEmitter,
+  deploymentIDInfo: types.DeploymentIDInfo,
+  cdnClient: cdn.CdnManagementClient,
+) => {
+  const { encodedTagName, zone } = deploymentIDInfo;
+  // Create or update root record to point from top-level domain to current deployed domain
+  await new dns.DnsManagementClient(
+    credentials,
+    subscriptionId,
+  ).recordSets.createOrUpdate(
+    resourceGroupName,
+    zone.name,
+    zone.relativeRecordName,
+    "CNAME",
+    {
+      cnameRecord: {
+        cname: (
+          await cdnClient.customDomains.listByEndpoint(
+            resourceGroupName,
+            naming.getCDNProfileName(organization, environment),
+            naming.getCDNProfileEndpointName(
+              organization,
+              environment,
+              encodedTagName.id,
+            ),
+          )
+        )[0].hostName,
+      },
+    },
+  );
+  // Create git tag
+  const tagName = ep.getTagNameFromEncoded(encodedTagName);
+  eventEmitter.emit("beforeCreatingGitTag", {
+    tagName,
+    deploymentIDInfo,
+  });
+  const tagCreation = await execFileAsync("git", [
+    "-c",
+    "user.email=cd-automation@codewell-site.project",
+    "-c",
+    "user.name=CD Automation",
+    "tag",
+    "-a",
+    "-m",
+    `Website ${encodedTagName.id} release ${encodedTagName.version}.`,
+    tagName,
+  ]);
+  const tagPush = await execFileAsync("git", ["push", "origin", tagName]);
+  eventEmitter.emit("afterCreatingGitTag", {
+    tagName,
+    deploymentIDInfo,
+    tagCreation,
+    tagPush,
+  });
 };
 
 void (async () => {
