@@ -16,7 +16,6 @@ defaults:
     shell: bash
 
 env:
-  SKIP_PREFLIGHT_CHECK: "true"
   CONTACT_EMAIL_ADDRESS: ${{ secrets.CONTACT_EMAIL_ADDRESS }}
 
 jobs:
