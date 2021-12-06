@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-cd frontend/public
+cd frontend/publish
 
 npm ci --ignore-scripts
 cp ../../infrastructure/website/src/naming.ts src
