@@ -35,6 +35,9 @@ const customHandling: Record<string, (inputs: any) => Record<string, any>> = {
       web: `https://${inputs.accountName}.web.windows.core.net/$web`,
     },
   }),
+  "azure-native:storage:StorageAccountStaticWebsite": () => ({
+    containerName: "$web",
+  }),
   "azure-native:cdn:Profile": (inputs) => ({
     name: inputs.profileName,
   }),

@@ -1,5 +1,6 @@
-import type * as pulumi from "@pulumi/pulumi";
+import * as pulumi from "@pulumi/pulumi";
 import * as resources from "@pulumi/azure-native/resources";
+import * as auth from "@pulumi/azure-native/authorization";
 import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
 import * as nw from "@pulumi/azure-native/network";
@@ -10,10 +11,21 @@ import * as input from "./input";
 import * as https from "./cdn-https";
 import * as naming from "./naming";
 
-const pulumiProgram = async (config: input.Configuration) =>
-  pulumiResources({
+const pulumiProgram = async (config: input.Configuration) => {
+  const { clientId, subscriptionId } = await auth.getClientConfig();
+  return pulumiResources({
     config,
     rg: await resources.getResourceGroup(config),
+    websiteUploader: {
+      principalId: clientId,
+      roleDefinitionId: (
+        await auth.getRoleDefinition({
+          // From https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+          roleDefinitionId: "ba92f5b4-2d11-453d-a403-e96b0029c9fe", // "Storage Blob Data Contributor",
+          scope: `/subscriptions/${subscriptionId}`,
+        })
+      ).id,
+    },
   }).endpoints.map(
     ({
       record: {
@@ -25,16 +37,22 @@ const pulumiProgram = async (config: input.Configuration) =>
       httpsState: customHttpsProvisioningState,
     }),
   );
+};
 
 export interface ResourcesConfiguration {
   config: Omit<input.Configuration, "resourceGroupName">;
   rg: Pick<resources.GetResourceGroupResult, "name" | "location">;
+  websiteUploader: {
+    principalId: string;
+    roleDefinitionId: string;
+  };
 }
 
 // We export this for unit tests, and also do not use resources.getResourceGroup here, as mocking that is not as simple as mocking Pulumi resources
 export const pulumiResources = ({
   config: { organization, environment, endpoints },
   rg: { name: resourceGroupName, location },
+  websiteUploader: { principalId, roleDefinitionId },
 }: ResourcesConfiguration) => {
   const topLevelResourceID = "website";
 
@@ -176,6 +194,20 @@ export const pulumiResources = ({
           staticWebsite,
           profile,
           endpoint,
+          roleAssignment: new auth.RoleAssignment(resourceID, {
+            principalId,
+            principalType: "ServicePrincipal",
+            roleDefinitionId,
+            scope: pulumi
+              .all({
+                id: sa.id,
+                name: staticWebsite.containerName,
+              })
+              .apply(
+                ({ id, name }) =>
+                  `${id}/blobServices/default/containers/${name}`,
+              ),
+          }),
           record: {
             hostName,
             recordSet,
