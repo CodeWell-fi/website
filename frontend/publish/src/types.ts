@@ -8,3 +8,11 @@ export interface EncodedTagName {
   id: string;
   version: string;
 }
+
+export interface DeploymentIDInfo {
+  encodedTagName: EncodedTagName;
+  zone: {
+    name: string;
+    relativeRecordName: string;
+  };
+}

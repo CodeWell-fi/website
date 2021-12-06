@@ -62,6 +62,14 @@ const idInfo = t.union(
       {
         ids: t.array(validation.nonEmptyString),
         tagInfo,
+        zone: t.intersection([
+          t.type({
+            name: validation.nonEmptyString,
+          }),
+          t.partial({
+            relativeRecordName: validation.nonEmptyString,
+          }),
+        ]),
       },
       "MultipleIDs",
     ),
@@ -81,6 +89,8 @@ export const infraConfig = t.type(
   },
   "InfrastructureConfiguration",
 );
+
+export type InfraConfig = t.TypeOf<typeof infraConfig>;
 
 export const packageJsonWithVersion = t.type({
   version: validation.nonEmptyString,

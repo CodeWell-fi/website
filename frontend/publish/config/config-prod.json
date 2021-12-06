@@ -8,6 +8,9 @@
     "tagInfo": {
       "prefix": "site-",
       "versionSeparator": "-v"
+    },
+    "zone": {
+      "name": "codewell.fi"
     }
   }
 }
