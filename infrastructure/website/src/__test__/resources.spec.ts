@@ -3,6 +3,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as nw from "@pulumi/azure-native/network";
 import * as storage from "@pulumi/azure-native/storage";
 import * as cdn from "@pulumi/azure-native/cdn";
+import * as auth from "@pulumi/azure-native/authorization";
 import { URL } from "url";
 import * as spec from "../resources";
 import * as input from "../input";
@@ -42,6 +43,10 @@ test("Simple configuration produces correct resources", testResources, {
     name: "dummy",
     location: "dummy",
   },
+  websiteUploader: {
+    principalId: "dummy",
+    roleDefinitionId: "dummy",
+  },
 });
 
 test(
@@ -64,6 +69,10 @@ const configFileToResourcesInput = (
     name: "dummy",
     location: "dummy",
   },
+  websiteUploader: {
+    principalId: "dummy",
+    roleDefinitionId: "dummy",
+  },
 });
 
 const performTestAsync = async (
@@ -78,7 +87,7 @@ const performTestAsync = async (
   try {
     const configObj = typeof input === "function" ? await input() : input;
     const { profile, endpoints } = spec.pulumiResources(configObj);
-    const { config, rg } = configObj;
+    const { config, rg, websiteUploader } = configObj;
     pulumi
       // If we pass pulumi resources as-is to pulumi.all, it won't process the outputs (for one reason or another).
       .all({
@@ -94,6 +103,7 @@ const performTestAsync = async (
             blobServiceProperties,
             staticWebsite,
             endpoint,
+            roleAssignment,
             record: { domain, recordSet, httpsResource, ...record },
           }) => ({
             sa: common.pickFromMockedResource(
@@ -114,11 +124,14 @@ const performTestAsync = async (
               storage.BlobServiceProperties,
               "isVersioningEnabled",
             ),
-            staticWebsite: common.pickFromMockedResource(
-              staticWebsite,
-              storage.StorageAccountStaticWebsite,
-              "indexDocument",
-            ),
+            staticWebsite: {
+              ...common.pickFromMockedResource(
+                staticWebsite,
+                storage.StorageAccountStaticWebsite,
+                "indexDocument",
+              ),
+              id: staticWebsite.id,
+            },
             endpoint: common.pickFromMockedResource(
               endpoint,
               cdn.Endpoint,
@@ -133,6 +146,13 @@ const performTestAsync = async (
               "deliveryPolicy",
             ),
             cdnEndpointHost: endpoint.hostName,
+            roleAssignment: common.pickFromMockedResource(
+              roleAssignment,
+              auth.RoleAssignment,
+              "principalId",
+              "roleDefinitionId",
+              "scope",
+            ),
             record: {
               ...record,
               domain: common.pickFromMockedResource(
@@ -184,6 +204,7 @@ const performTestAsync = async (
                 endpointHost,
                 cdnEndpointHost,
                 endpoint,
+                roleAssignment,
                 record,
               },
               idx,
@@ -202,6 +223,7 @@ const performTestAsync = async (
                 isVersioningEnabled: false, // Website just has static files, no need for versioning
               });
               c.deepEqual(staticWebsite, {
+                id: staticWebsite.id,
                 indexDocument: "index.html", // Must be same name as .html file in frontend/code/public folder
               });
 
@@ -226,6 +248,11 @@ const performTestAsync = async (
                 deliveryPolicy: spec.deliveryPolicy,
               };
               c.deepEqual(endpoint, expectedEndpoint);
+              c.deepEqual(roleAssignment, {
+                scope: staticWebsite.id,
+                principalId: websiteUploader.principalId,
+                roleDefinitionId: websiteUploader.roleDefinitionId,
+              });
               const hasCNameRecord = !!zone;
               const hostName = hasCNameRecord
                 ? `${uniformEndpoint.dnsName}.${zone.zoneName}`
