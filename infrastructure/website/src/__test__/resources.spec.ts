@@ -106,16 +106,19 @@ const performTestAsync = async (
             roleAssignment,
             record: { domain, recordSet, httpsResource, ...record },
           }) => ({
-            sa: common.pickFromMockedResource(
-              sa,
-              storage.StorageAccount,
-              "accountName",
-              "allowBlobPublicAccess",
-              "enableHttpsTrafficOnly",
-              "minimumTlsVersion",
-              "networkRuleSet",
-              "resourceGroupName",
-            ),
+            sa: {
+              ...common.pickFromMockedResource(
+                sa,
+                storage.StorageAccount,
+                "accountName",
+                "allowBlobPublicAccess",
+                "enableHttpsTrafficOnly",
+                "minimumTlsVersion",
+                "networkRuleSet",
+                "resourceGroupName",
+              ),
+              id: sa.id,
+            },
             endpointHost: sa.primaryEndpoints.web.apply(
               (url) => new URL(url).host,
             ),
@@ -212,6 +215,7 @@ const performTestAsync = async (
               const { zone, ...uniformEndpoint } = uniformEndpoints[idx];
               // Storage account
               c.deepEqual(sa, {
+                id: sa.id,
                 accountName: `${config.organization}${config.environment}site${uniformEndpoint.id}`,
                 allowBlobPublicAccess: true, // Public website - don't require Azure authentication to access data
                 enableHttpsTrafficOnly: true, // Disallow unencrypted traffic (notice that CDN allows http, but only for http -> https redirect)
@@ -249,7 +253,7 @@ const performTestAsync = async (
               };
               c.deepEqual(endpoint, expectedEndpoint);
               c.deepEqual(roleAssignment, {
-                scope: staticWebsite.id,
+                scope: `${sa.id}/blobServices/default/containers/$web`,
                 principalId: websiteUploader.principalId,
                 roleDefinitionId: websiteUploader.roleDefinitionId,
               });

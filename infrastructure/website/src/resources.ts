@@ -1,4 +1,4 @@
-import type * as pulumi from "@pulumi/pulumi";
+import * as pulumi from "@pulumi/pulumi";
 import * as resources from "@pulumi/azure-native/resources";
 import * as auth from "@pulumi/azure-native/authorization";
 import * as storage from "@pulumi/azure-native/storage";
@@ -198,7 +198,15 @@ export const pulumiResources = ({
             principalId,
             principalType: "ServicePrincipal",
             roleDefinitionId,
-            scope: staticWebsite.id,
+            scope: pulumi
+              .all({
+                id: sa.id,
+                name: staticWebsite.containerName,
+              })
+              .apply(
+                ({ id, name }) =>
+                  `${id}/blobServices/default/containers/${name}`,
+              ),
           }),
           record: {
             hostName,
