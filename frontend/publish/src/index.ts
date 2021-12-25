@@ -6,6 +6,7 @@ import { promisify } from "util";
 import * as dns from "@azure/arm-dns";
 import * as cdn from "@azure/arm-cdn";
 
+import * as common from "@data-heaving/common";
 import * as validation from "@data-heaving/common-validation";
 import * as identity from "@azure/identity";
 import * as types from "./types";
@@ -204,7 +205,80 @@ const afterDeployment = async (
   cdnClient: cdn.CdnManagementClient,
 ) => {
   const { encodedTagName, zone } = deploymentIDInfo;
-  // Create or update root record to point from top-level domain to current deployed domain
+  // Get the correct endpoint
+  const profileName = naming.getCDNProfileName(organization, environment);
+  const endpoints = await cdnClient.endpoints.listByProfile(
+    resourceGroupName,
+    profileName,
+  );
+  const fullDNSName = `${
+    zone.relativeRecordName === "@" ? "" : `${zone.relativeRecordName}.`
+  }${zone.name}`;
+
+  // Delete custom domain from previous endpoint, if exists
+  // Iterate all EPs of CDN profile
+  const previousDomain = (
+    await Promise.all(
+      endpoints.map(async ({ name }) => ({
+        name,
+        domains: await cdnClient.customDomains.listByEndpoint(
+          resourceGroupName,
+          profileName,
+          name ??
+            doThrow(
+              "This should never happen (CDN endpoint name was undefined).",
+            ),
+        ),
+      })),
+    )
+  )
+    .flatMap(({ name, domains }) => domains.map((domain) => ({ name, domain })))
+    .find(({ domain: { hostName } }) => hostName === fullDNSName);
+  const dnsClient = new dns.DnsManagementClient(credentials, subscriptionId);
+  // Update the records to point to endpoint
+  const endpointName = naming.getCDNProfileEndpointName(
+    organization,
+    environment,
+    encodedTagName.id,
+  );
+  if (previousDomain && previousDomain.name !== endpointName) {
+    const endpointName =
+      previousDomain.name ??
+      doThrow<string>(
+        "This should never happen (CDN endpoint name was undefined #2).",
+      );
+    const endpointDomainName =
+      previousDomain.domain.name ??
+      doThrow<string>(
+        "This should never happen (CDN endpoint domain name was undefined).",
+      );
+    eventEmitter.emit("beforeDeletingPreviousCDNEndpointDomain", {
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+      hostname: previousDomain.domain.hostName,
+    });
+    // We must first remove DNS record before deleting CDN domain
+    await dnsClient.recordSets.deleteMethod(
+      zone.resourceGroupName,
+      zone.name,
+      zone.relativeRecordName,
+      "CNAME",
+    );
+    await cdnClient.customDomains.deleteMethod(
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+    );
+  }
+
+  const endpoint =
+    endpoints.find(({ name }) => name === endpointName) ??
+    doThrow<typeof endpoints[number]>(
+      `This should not happen (CDN endpoint "${endpointName}" was not found.`,
+    );
   await new dns.DnsManagementClient(
     credentials,
     subscriptionId,
@@ -215,20 +289,72 @@ const afterDeployment = async (
     "CNAME",
     {
       cnameRecord: {
-        cname: (
-          await cdnClient.customDomains.listByEndpoint(
-            resourceGroupName,
-            naming.getCDNProfileName(organization, environment),
-            naming.getCDNProfileEndpointName(
-              organization,
-              environment,
-              encodedTagName.id,
-            ),
-          )
-        )[0].hostName,
+        cname: endpoint.hostName,
       },
+      tTL: 1 * 60 * 60,
     },
   );
+  // Add custom domain to endpoint ( must be done *after* adding record to DNS zone)
+  const endpointDomainName = "published";
+  if (previousDomain?.name !== endpointName) {
+    eventEmitter.emit("beforeCreatingNewCDNEndpointDomain", {
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+      hostname: fullDNSName,
+    });
+    await cdnClient.customDomains.create(
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+      fullDNSName,
+    );
+  }
+  // Enable HTTPS for the domain
+  const enablingCustomHttpsEvent: events.VirtualWebsiteDeployEvents["beforeEnablingCustomHttps"] =
+    {
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+      hostname: fullDNSName,
+    };
+  eventEmitter.emit("beforeEnablingCustomHttps", enablingCustomHttpsEvent);
+  let { customHttpsProvisioningState, customHttpsProvisioningSubstate } =
+    await cdnClient.customDomains.get(
+      resourceGroupName,
+      profileName,
+      endpointName,
+      endpointDomainName,
+    );
+  if (customHttpsProvisioningState === "Disabled") {
+    const start = new Date().valueOf();
+    while (customHttpsProvisioningState === "Enabling") {
+      await common.sleep(10 * 1000);
+      eventEmitter.emit("duringEnablingCustomHttps", {
+        ...enablingCustomHttpsEvent,
+        customHttpsProvisioningState,
+        customHttpsProvisioningSubstate,
+        elapsedM: (new Date().valueOf() - start) / 1000 / 60,
+      });
+
+      ({ customHttpsProvisioningState, customHttpsProvisioningSubstate } =
+        await cdnClient.customDomains.get(
+          resourceGroupName,
+          profileName,
+          endpointName,
+          endpointDomainName,
+        ));
+    }
+  }
+  eventEmitter.emit("afterEnablingCustomHttps", {
+    ...enablingCustomHttpsEvent,
+    state: customHttpsProvisioningState ?? "",
+    subState: customHttpsProvisioningSubstate ?? "",
+  });
+
   // Create git tag
   const tagName = ep.getTagNameFromEncoded(encodedTagName);
   eventEmitter.emit("beforeCreatingGitTag", {
@@ -241,9 +367,9 @@ const afterDeployment = async (
     "-c",
     "user.name=CD Automation",
     "tag",
-    "-a",
+    "-a", // TODO change to -s for signed commits - need some more work on this, see https://github.com/josecelano/pygithub/blob/main/docs/how_to_sign_automatic_commits_in_github_actions.md and https://github.com/actions/runner/issues/667 for more details.
     "-m",
-    `Website ${encodedTagName.id} release ${encodedTagName.version}.`,
+    `Website release ${encodedTagName.version} (${encodedTagName.id}).`,
     tagName,
   ]);
   const tagPush = await execFileAsync("git", ["push", "origin", tagName]);

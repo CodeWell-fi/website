@@ -1,4 +1,4 @@
-# Repository Managing Code Well Public Website
+# Repository Managing Public Website of Company Code Well
 This repository contains infrastructure and content setup for website hosted by company Code Well.
 
 # Website Architecture

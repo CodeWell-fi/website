@@ -11,7 +11,8 @@
     },
     "zone": {
       "resourceGroupName": "codewell-dns-managed-site",
-      "name": "codewell.fi"
+      "name": "codewell.fi",
+      "relativeRecordName": "www"
     }
   }
 }
