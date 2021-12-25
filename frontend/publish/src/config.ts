@@ -62,15 +62,24 @@ const idInfo = t.union(
       {
         ids: t.array(validation.nonEmptyString),
         tagInfo,
-        zone: t.intersection([
-          t.type({
-            resourceGroupName: validation.nonEmptyString,
-            name: validation.nonEmptyString,
-          }),
-          t.partial({
-            relativeRecordName: validation.nonEmptyString,
-          }),
-        ]),
+        zone: t.intersection(
+          [
+            t.type(
+              {
+                resourceGroupName: validation.nonEmptyString,
+                name: validation.nonEmptyString,
+              },
+              "ZoneInfoMandatory",
+            ),
+            t.partial(
+              {
+                relativeRecordName: validation.nonEmptyString,
+              },
+              "ZoneInfoOptional",
+            ),
+          ],
+          "ZoneInfo",
+        ),
       },
       "MultipleIDs",
     ),

@@ -25,6 +25,24 @@ export interface VirtualWebsiteDeployEvents {
   cdnPurgeCompleted: VirtualWebsiteDeployEvents["cdnPurgeStarting"] & {
     purgeSuccess: boolean;
   };
+  beforeDeletingPreviousCDNEndpointDomain: {
+    resourceGroupName: string;
+    profileName: string;
+    endpointName: string;
+    endpointDomainName: string;
+    hostname: string;
+  };
+  beforeCreatingNewCDNEndpointDomain: VirtualWebsiteDeployEvents["beforeDeletingPreviousCDNEndpointDomain"];
+  beforeEnablingCustomHttps: VirtualWebsiteDeployEvents["beforeDeletingPreviousCDNEndpointDomain"];
+  duringEnablingCustomHttps: VirtualWebsiteDeployEvents["beforeDeletingPreviousCDNEndpointDomain"] & {
+    customHttpsProvisioningState: string | undefined;
+    customHttpsProvisioningSubstate: string | undefined;
+    elapsedM: number;
+  };
+  afterEnablingCustomHttps: VirtualWebsiteDeployEvents["beforeDeletingPreviousCDNEndpointDomain"] & {
+    state: string;
+    subState: string;
+  };
   beforeCreatingGitTag: {
     tagName: string;
     deploymentIDInfo: types.DeploymentIDInfo;
@@ -91,7 +109,7 @@ export const consoleLoggingRunEventEmitterBuilder = (
   );
   builder.addEventListener("cdnPurgeProgress", (arg) => {
     const seconds = Math.trunc(arg.elapsedS);
-    if (seconds % 10 === 0) {
+    if (seconds > 0 && seconds % 10 === 0) {
       logger(`Waiting for Azure CDN endpoint purge... (~${seconds}s)`);
     }
   });
@@ -100,6 +118,48 @@ export const consoleLoggingRunEventEmitterBuilder = (
       `Completed Azure CDN endpoint purge ${
         arg.purgeSuccess ? "" : "un"
       }successfully.`,
+    ),
+  );
+
+  const logCDNEndpointDomainInfo = (
+    arg: VirtualWebsiteDeployEvents["beforeDeletingPreviousCDNEndpointDomain"],
+    prefix: string,
+  ) =>
+    logger(
+      `${prefix}, RG ${arg.resourceGroupName}, profile ${arg.profileName}, endpoint ${arg.endpointName}, domain ${arg.endpointDomainName}, hostname ${arg.hostname}.`,
+    );
+  builder.addEventListener("beforeDeletingPreviousCDNEndpointDomain", (arg) =>
+    logCDNEndpointDomainInfo(
+      arg,
+      "Deleting previous publishing CDN endpoint domain",
+    ),
+  );
+
+  builder.addEventListener("beforeCreatingNewCDNEndpointDomain", (arg) =>
+    logCDNEndpointDomainInfo(
+      arg,
+      "Creating new publishing CDN endpoint domain",
+    ),
+  );
+
+  builder.addEventListener("beforeEnablingCustomHttps", (arg) =>
+    logCDNEndpointDomainInfo(arg, "Enabling HTTPS"),
+  );
+
+  builder.addEventListener("duringEnablingCustomHttps", (arg) => {
+    const minutes = Math.trunc(arg.elapsedM);
+    if (minutes > 0) {
+      logCDNEndpointDomainInfo(
+        arg,
+        `Waiting for HTTPS (${minutes}m, ${arg.customHttpsProvisioningState}, ${arg.customHttpsProvisioningSubstate})`,
+      );
+    }
+  });
+
+  builder.addEventListener("afterEnablingCustomHttps", (arg) =>
+    logCDNEndpointDomainInfo(
+      arg,
+      `HTTPS state info: ${arg.state}, ${arg.subState}`,
     ),
   );
 

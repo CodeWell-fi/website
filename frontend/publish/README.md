@@ -26,3 +26,5 @@ There is further documentation about the configuration in [config subfolder](./c
 
 # Blue-Green Deployment In Production
 TODO.
+
+Don't do too often using CDN-managed HTTPS, because: `Custom HTTPS cannot be enabled at the moment because it takes 8 hours to clean up your previous enablement request for the same custom domain. Please try again later.`.
